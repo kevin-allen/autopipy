@@ -72,6 +72,17 @@ sudo apt install cuda-10-1
 sudo apt install libcudnn7
 ```
 
+Set PATH for cuda 10.1 installation
+```
+emacs ~/.bashrc
+```
+Add the following
+```
+if [ -d "/usr/local/cuda-10.1/bin/" ]; then
+    export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
+    export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+fi
+```
 
 ## Installing wxPython
 
