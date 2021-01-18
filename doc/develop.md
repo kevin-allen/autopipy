@@ -56,6 +56,8 @@ You need a version of cuda that is compatible with the version of tensorflow you
 
 For tensoflow==1.15, I have installed cuda 10.1
 
+The instructions were taken from [here](https://medium.com/@stephengregory_69986/installing-cuda-10-1-on-ubuntu-20-04-e562a5e724a0).
+
 ```
 sudo apt update
 sudo add-apt-repository ppa:graphics-drivers
