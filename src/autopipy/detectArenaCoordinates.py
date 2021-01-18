@@ -21,7 +21,38 @@ import cv2
 # you might need to activate a python environment, if using virtualenv, e.g.,  source opencv/bin/activate
 
 
-def detectArenaCoordinates (fileName, minRadius=180, maxRadius=220, numFrames=100, blur=11, circle='min', videoDisplay=False, return_img=False):
+def detectArenaCoordinates (fileName, minRadius=180, maxRadius=220, numFrames=100, blur=11, circle='min', videoDisplay=False, returnImg=False):
+    """
+    A function to detect the arena (or circles) from a video
+    
+    Parameters
+    ----
+    fileName : str
+        The name of a video file
+    minRadius : int
+        The minimum radius of a circle (default is 180)
+    maxRadius : int
+        The maximal radius of a circle (default is 220)
+    numFrames : int
+        Will analyze the first numFrames in the video, gets the median (default is 100)
+    blur : int
+        Blur applied to the image before detection (default is 11)
+    circ : str
+        Whether to use the median or min function to get the arena (default is "min")
+    videoDisplay : bool
+        Whether to display the detected cicles on the processed image when detecting (default is False)
+    returnImg : bool
+        Whether to return an image with the detected arena on it (default is False)
+    
+
+    Returns
+    ----
+    coordinates 
+    or 
+    coordinates, img
+
+    coordinates : list containing the x and y coordinate of arena center and the radius of the arena
+    """
     count = 0
     cap = cv2.VideoCapture(fileName)
 
@@ -78,7 +109,7 @@ def detectArenaCoordinates (fileName, minRadius=180, maxRadius=220, numFrames=10
 
 
     # Return
-    if return_img:
+    if returnImg:
         return coordinates, img
     else:
         return coordinates
@@ -120,7 +151,7 @@ if __name__ == '__main__':
         quit()
 
     # Detect coordinates
-    x, img = detectArenaCoordinates (fileName, minRadius, maxRadius, numFrames, blur, circle='median', videoDisplay=videoDisplay, return_img=True)
+    x, img = detectArenaCoordinates (fileName, minRadius, maxRadius, numFrames, blur, circle='median', videoDisplay=videoDisplay, returnImg=True)
 
     ## draw the selected circle and save in a file called arenaDetection.png
     cimg = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
