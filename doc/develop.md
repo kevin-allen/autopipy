@@ -50,35 +50,41 @@ pip install tensorflow-GPU==1.15
 
 ## Installing NVIDIA CUDA
 
+Be **carefull**, you can do some damage to your Ubuntu installation.
+
 If you want to use tensorflow-gpu, you need to install the cuda libraries on your computer.
 
 You need a version of cuda that is compatible with the version of tensorflow you are running.
 
 For tensoflow==1.15, I have installed cuda 10.1
 
-The instructions were taken from [here](https://medium.com/@stephengregory_69986/installing-cuda-10-1-on-ubuntu-20-04-e562a5e724a0).
-
-You might have to remove previously installed packages.
+I installed the NVIDIA drivers for my GPU
 
 
 ```
-sudo apt update
-sudo add-apt-repository ppa:graphics-drivers
-sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
-sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
-sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda_learn.list'
+sudo apt install nvidia-driver-460
 ```
 
+Restart you computer and run
+
 ```
-sudo apt update
-sudo apt install cuda-10-1
-sudo apt install libcudnn7
+nvidia-smi
+```
+You should see your gpu.
+
+
+Then I installed the CUDA toolkit (10.1) that was available with Ubuntu.
+
+```
+sudo apt install nvidia-cuda-toolkit
 ```
 
-Set PATH for cuda 10.1 installation
+Check that you have nvcc
+
 ```
-emacs ~/.bashrc
+nvcc --version
 ```
+
 Add the following
 ```
 if [ -d "/usr/local/cuda-10.1/bin/" ]; then
@@ -86,6 +92,15 @@ if [ -d "/usr/local/cuda-10.1/bin/" ]; then
     export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 fi
 ```
+## Check if you can use your GPU
+
+```
+source ~/python_virtual_environments/autopi37/bin/activate
+python -c "import tensorflow as tf; tf.config.experimental.list_physical_devices('GPU');"
+```
+
+
+
 
 ## Installing wxPython
 
