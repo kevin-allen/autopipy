@@ -5,7 +5,9 @@
 
 ## Install the right python version
 
-To be able to use tensorflow 1.15, you need to have python3.7. This makes it possible to use deeplabcut.
+My principal considerations were to be able to use deeplabcut with tensorflow-GPU.
+
+The version of tensorflow available from pypi works with tensorflow 1.15, which is avaialbe with python3.7.
 
 ```
 sudo apt update
@@ -42,7 +44,7 @@ source ~/python_virtual_environments/autopi37/bin/activate
 ```
 python3.7 -m pip install --upgrade pip
 pip install deeplabcut
-pip install tensorflow==1.15
+pip install tensorflow-GPU==1.15
 ```
 
 ## Installing wxPython
@@ -64,9 +66,6 @@ pip wheel wxPython-4.1.1.tar.gz
 pip install wxPython-4.1.1-cp37-cp37m-linux_x86_64.whl
 python -c "import wx; a=wx.App(); wx.Frame(None,title='hello world').Show(); a.MainLoop();"
 ```
-
-
-
 
 
 ## Saving the environment requirements
