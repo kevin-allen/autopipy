@@ -58,48 +58,50 @@ You need a version of cuda that is compatible with the version of tensorflow you
 
 For tensoflow==1.15, I have installed cuda 10.1
 
-I installed the NVIDIA drivers for my GPU
+I followed the instructions (here)[https://medium.com/@stephengregory_69986/installing-cuda-10-1-on-ubuntu-20-04-e562a5e724a0].
 
-
-```
-sudo apt install nvidia-driver-460
-```
-
-Restart you computer and run
+I had to force an overwrite when installing to get rid of an error.
 
 ```
-nvidia-smi
+sudo apt-get -o Dpkg::Options::="--force-overwrite" install --fix-broken
 ```
-You should see your gpu.
-
-
-Then I installed the CUDA toolkit (10.1) that was available with Ubuntu.
-
-```
-sudo apt install nvidia-cuda-toolkit
-```
-
-Check that you have nvcc
 
 ```
 nvcc --version
 ```
 
-Add the following
+Add the following to your ~/.bashrc file.
+
 ```
 if [ -d "/usr/local/cuda-10.1/bin/" ]; then
     export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
     export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 fi
 ```
-## Check if you can use your GPU
+
+
+## Check if you can use tensorflow and your GPU
 
 ```
 source ~/python_virtual_environments/autopi37/bin/activate
 python -c "import tensorflow as tf; tf.config.experimental.list_physical_devices('GPU');"
 ```
+If you get error messages like, you will have to install the missing packages.
 
+```
+2021-01-18 17:06:34.023491: W tensorflow/stream_executor/platform/default/dso_loader.cc:55] Could not load dynamic library 'libcudart.so.10.0'; dlerror: libcudart.so.10.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/local/cuda-10.1/lib64:/home/kevin/catkin_ws/devel/lib:/opt/ros/noetic/lib
+```
 
+I was missing the following packages on my Ubuntu 20.04 installation.
+
+```
+sudo apt-get install cuda-cudart-10-0
+sudo apt-get install cuda-cublas-10-0
+sudo apt-get install cuda-cufft-10-0
+sudo apt-get install cuda-curand-10-0
+sudo apt-get install cuda-cusolver-10-0
+sudo apt-get install cuda-cusparse-10-0
+```
 
 
 ## Installing wxPython
