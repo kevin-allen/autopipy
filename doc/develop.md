@@ -2,12 +2,14 @@
 
 * [Example of python package] (https://github.com/pypa/sampleproject)
 
+Most of the work needed to get going is to prepare your computer and virtuel environment for using deeplabcut and tensorflow. 
+This will not be needed when using the package with anaconda but I wanted a non-anaconda environment working.
 
 ## Install the right python version
 
-My principal considerations were to be able to use deeplabcut with tensorflow-GPU.
+One principal consideration was to be able to use deeplabcut with tensorflow-GPU. 
 
-The version of tensorflow available from pypi works with tensorflow 1.15, which is avaialbe with python3.7.
+The version of tensorflow available from pypi works with tensorflow 1.15, which is avaialbe with python3.7. So that chose the python version for me: **3.7**
 
 ```
 sudo apt update
@@ -21,7 +23,7 @@ sudo apt install python3.7-venv
 
 ## Set up a virtual environment from scratch for development
 
-We will use `venv` to start with. You might have to install it on your system.
+We will use `venv` to create the virtual environments. You might have to install it on your system.
 
 ```
 sudo apt-get install python3.7-venv
@@ -33,6 +35,8 @@ mkdir python_virtual_environments
 cd python_virtual_environments
 python3.7 -m venv autopi37
 ```
+
+**autopi37** is my environment to use autopipy when developing the package.
 
 To activate the environment, use source
 
@@ -48,7 +52,7 @@ pip install deeplabcut
 pip install tensorflow-GPU==1.15
 ```
 
-## Installing NVIDIA CUDA
+## Installing NVIDIA CUDA to use the GPU
 
 Be **carefull**, you can do some damage to your Ubuntu installation.
 
@@ -56,7 +60,7 @@ If you want to use tensorflow-gpu, you need to install the cuda libraries on you
 
 You need a version of cuda that is compatible with the version of tensorflow you are running.
 
-For tensoflow==1.15, I have installed cuda 10.1
+For tensoflow==1.15, I had to use cuda 10.1
 
 I followed the instructions (here)[https://medium.com/@stephengregory_69986/installing-cuda-10-1-on-ubuntu-20-04-e562a5e724a0].
 
@@ -78,6 +82,8 @@ if [ -d "/usr/local/cuda-10.1/bin/" ]; then
     export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 fi
 ```
+
+**Reboot your computer**
 
 
 ## Check if you can use tensorflow and your GPU
@@ -132,7 +138,6 @@ pip install wxPython-4.1.1-cp37-cp37m-linux_x86_64.whl
 python -c "import wx; a=wx.App(); wx.Frame(None,title='hello world').Show(); a.MainLoop();"
 ```
 
-
 ## Saving the environment requirements
 
 You can save the requirement in the repository.
@@ -159,9 +164,8 @@ export PYTHONPATH="${PYTHONPATH}:/home/kevin/repo/autopipy/src/autopipy/"
 You can then import a module with
 
 ```
-import detectArenaCoordinates
+python -c "import detectArenaCoordinates"
 ```
-
 
 ## Upload to testpypi
 
