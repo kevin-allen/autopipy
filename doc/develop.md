@@ -14,6 +14,7 @@ sudo apt update
 sudo apt install software-properties-common
 sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt install python3.7
+sudo apt-get install python3.7-dev
 python3.7 --version
 sudo apt install python3.7-venv
 ```
@@ -61,6 +62,7 @@ cd xwPy_build/
 source bin/activate
 pip install -U pip
 pip install -U six wheel setuptools
+pip install python-config
 pip download wxPython
 pip wheel wxPython-4.1.1.tar.gz
 pip install wxPython-4.1.1-cp37-cp37m-linux_x86_64.whl
