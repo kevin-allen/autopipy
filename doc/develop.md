@@ -48,15 +48,39 @@ pip install deeplabcut
 pip install tensorflow-GPU==1.15
 ```
 
+## Installing NVIDIA CUDA
+
+If you want to use tensorflow-gpu, you need to install the cuda libraries on your computer.
+
+You need a version of cuda that is compatible with the version of tensorflow you are running.
+
+For tensoflow==1.15, I have installed cuda 10.1
+
+```
+sudo apt update
+sudo add-apt-repository ppa:graphics-drivers
+sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
+sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda_learn.list'
+```
+
+```
+sudo apt update
+sudo apt install cuda-10-1
+sudo apt install libcudnn7
+```
+
+
 ## Installing wxPython
 
-I had to download the source, build the wheel and install it. 
+I could not install wxPython from a wheel in the pypi repository. I had to download the source, build the wheel and install it. 
 
-The wheel is probably python-version-specific
+I presume that the wheel is probably python-version-specific, so build it from an virtual environment with the same python version as you intend to use.
 
 You can find more information [here](https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html).
 
 ```
+deactivate
 python3.7 -m venv xwPy_build
 cd xwPy_build/
 source bin/activate
@@ -65,6 +89,12 @@ pip install -U six wheel setuptools
 pip install python-config
 pip download wxPython
 pip wheel wxPython-4.1.1.tar.gz
+```
+
+Now you can install the wheel in any environment with the same python version.
+
+```
+source ~/python_virtual_environments/autopi37/bin/activate
 pip install wxPython-4.1.1-cp37-cp37m-linux_x86_64.whl
 python -c "import wx; a=wx.App(); wx.Frame(None,title='hello world').Show(); a.MainLoop();"
 ```
