@@ -1,29 +1,71 @@
 # Development of python package
 
-
 * [Example of python package] (https://github.com/pypa/sampleproject)
 
 
-## Set up a virtual environment from scratch for development
+## Install the right python version
 
-We will use venv to start with. We need to install it on the system.
+To be able to use tensorflow 1.15, you need to have python3.7. This makes it possible to use deeplabcut.
 
 ```
-sudo apt-get install python3-venv
+sudo apt update
+sudo apt install software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt install python3.7
+python3.7 --version
+sudo apt install python3.7-venv
+```
+
+## Set up a virtual environment from scratch for development
+
+We will use `venv` to start with. You might have to install it on your system.
+
+```
+sudo apt-get install python3.7-venv
 ```
 
 ```
 cd ~
 mkdir python_virtual_environments
 cd python_virtual_environments
-python3 -m venv tutorial-env
+python3.7 -m venv autopi37
 ```
 
 To activate the environment, use source
 
 ```
-source ~/python_virtual_environments/autopi-env/bin/activate
+source ~/python_virtual_environments/autopi37/bin/activate
 ```
+
+## Install a few needed packages
+
+```
+python3.7 -m pip install --upgrade pip
+pip install deeplabcut
+pip install tensorflow==1.15
+```
+
+## Installing wxPython
+
+I had to download the source, build the wheel and install it. 
+
+The wheel is probably python-version-specific
+
+You can find more information [here](https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html).
+
+```
+python3.7 -m venv xwPy_build
+cd xwPy_build/
+source bin/activate
+pip install -U pip
+pip install -U six wheel setuptools
+pip download wxPython
+pip wheel wxPython-4.1.1.tar.gz
+pip install wxPython-4.1.1-cp37-cp37m-linux_x86_64.whl
+python -c "import wx; a=wx.App(); wx.Frame(None,title='hello world').Show(); a.MainLoop();"
+```
+
+
 
 
 
