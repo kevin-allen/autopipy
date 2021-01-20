@@ -184,12 +184,16 @@ If you are developing a package, you probably want to include the directory into
 You can set this in your `~/.bashrc`
 
 ```
+eamcs ~/.bashrc
+```
+Add this at the end.
+```
 export PYTHONPATH="${PYTHONPATH}:/home/kevin/repo/autopipy/src/autopipy/"
 ```
-
-You can then import a module with
+Open a new terminal and test it.
 
 ```
+source ~/python_virtual_environments/autopi37/bin/activate
 python -c "import detectArenaCoordinates"
 ```
 
