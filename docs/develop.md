@@ -46,6 +46,10 @@ source ~/python_virtual_environments/autopi37/bin/activate
 
 ## Install a few needed packages
 
+If you are using a proxy, you might have to set this shell variable if it is not already set.
+```
+echo $https_proxy
+export https_proxy=www-int2.inet.dkfz-heidelberg.de:80
 ```
 python3.7 -m pip install --upgrade pip
 pip install deeplabcut
@@ -60,9 +64,12 @@ If you want to use tensorflow-gpu, you need to install the cuda libraries on you
 
 You need a version of cuda that is compatible with the version of tensorflow you are running.
 
-For tensoflow==1.15, I had to use cuda 10.1
+For tensoflow==1.15, I had to use cuda 10.1 or 9.1
 
 I followed the instructions (here)[https://medium.com/@stephengregory_69986/installing-cuda-10-1-on-ubuntu-20-04-e562a5e724a0].
+
+**Trick:** If you are behind a proxy, you might want to get briefly mobile internet to run the `sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub` command.
+
 
 I had to force an overwrite when installing to get rid of an error.
 
