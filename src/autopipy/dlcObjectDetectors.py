@@ -58,8 +58,8 @@ class leverDetector(dlc):
         There will be an arrow specifying the direction of the lever and a dot for its center
         
         Arguments
-            pathVideoFile: video to label
-            pathOutputFile
+            pathVideoFile: video to get the frames from
+            pathOutputFile: labeled video to create
         """
         if not os.path.isfile(pathVideoFile): 
             print(pathVideoFile + " does not exist")
