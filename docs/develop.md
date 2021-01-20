@@ -1,9 +1,11 @@
-# Development of python package
+# To development the autopipy package
+
+Here are some notes on my python environment that I used to work on autopipy. This was my first python package so it might not be the optimal organization.
 
 * [Example of python package] (https://github.com/pypa/sampleproject)
 
-Most of the work needed to get going is to prepare your computer and virtuel environment for using deeplabcut and tensorflow. 
-This will not be needed when using the package with anaconda but I wanted a non-anaconda environment working.
+This describe most of the steps needed to get a virtuel environment working with deeplabcut and tensorflow. 
+This might not be needed when using the package later on, since it could run easily in the conda environment for deeplabcut.
 
 ## Install the right python version
 
@@ -140,13 +142,18 @@ pip download wxPython
 pip wheel wxPython-4.1.1.tar.gz
 ```
 
-Now you can install the wheel in any environment with the same python version.
+Building the wheel will take a while (20 minutes). 
+
+Once done, you can install the wheel in any environment with the same python version.
 
 ```
+deactivate
+cd ~/python_virtual_environments/xwPy_build/
 source ~/python_virtual_environments/autopi37/bin/activate
 pip install wxPython-4.1.1-cp37-cp37m-linux_x86_64.whl
 python -c "import wx; a=wx.App(); wx.Frame(None,title='hello world').Show(); a.MainLoop();"
 ```
+The test should open a window. Just close it.
 
 ## Saving the environment requirements
 
@@ -160,6 +167,15 @@ If you download the repository on a new computer, you can install the requiremen
 
 ```
 python -m pip install -r ~/repo/autopipy/requirements.txt
+```
+
+## Completion in ipython
+
+I had a problem when I used the tab completion in ipython. It would crash.
+I downgraded jedi from version from 0.18.0 to 0.17.2 and it started to work.
+
+```
+pip install jedi==0.17.2
 ```
 
 ## Manually add your package to the PYTHONPATH variable
