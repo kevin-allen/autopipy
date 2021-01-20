@@ -38,13 +38,14 @@ class dlc():
         
         self.getBodyParts()
     
-    def inferenceVideo(self, pathVideoFile):
+    def inferenceVideo(self, pathVideoFile, saveCsv = True):
         """
         Perform inference on a video with our model.
         Simply runs deeplabcut.analyze_videos()
         
         Arguments:
             pathVideoFile
+            saveCsv Boolean indicating whether to save the data into a csv file
         """
         if not os.path.isfile(pathVideoFile): 
             print(pathVideoFile + " does not exist")
@@ -58,11 +59,39 @@ class dlc():
         # get the name of the file with the output data
         self.pathVideoOutputH5=self.getVideoOutputH5(pathVideoFile)
         
-        self.out = h5py.File(self.pathVideoOutputH5,mode="r")['df_with_missing']['table'][:]
+        # load the position data by default
+        self.loadPositionData(pathVideoFile)
+            
+        if saveCsv:
+            df = self.getDataFrameOut(pathVideoFile)
+            fileName = os.path.splitext(self.pathVideoOutputH5)[0]+".csv"
+            print("Saving position data to "+fileName)
+            df.to_csv(fileName,index=False)
+            
+            
+    def labelVideo(self, pathVideoFile):
+        """
+        Create a labelled video with deeplabcut function create_labeled_video()
         
+        Arguments:
+            pathVideoFile
+        """
+        if not os.path.isfile(pathVideoFile): 
+            print(pathVideoFile + " does not exist")
+            return False     
+        self.pathVideoFile = pathVideoFile
+        print("Running dlc.create_label_video on "+ pathVideoFile)
+        deeplabcut.create_labeled_video(self.pathConfigFile,self.pathVideoFile)
+        
+        self.pathVideoOutputH5=self.getVideoOutputH5(pathVideoFile)
+        fileName = os.path.splitext(self.pathVideoOutputH5)[0]+"_labeled.mp4"
+        print("Created "+fileName)
+    
+    
     def loadPositionData(self, pathVideoFile):
         """
         Load the position data from the h5 file that has been generated during inference.
+        Will store the data as a np array in self.out
         
         Arguments:
             pathVideoFile
@@ -85,22 +114,24 @@ class dlc():
         self.out = h5py.File(self.pathVideoOutputH5,mode="r")['df_with_missing']['table'][:]
         
         # turn this into a np.array with one row per frame
-        self.out = np.concatenate([x[1] for x in self.out]).reshape(-1,len(model.bodyParts)*3)
+        self.out = np.concatenate([x[1] for x in self.out]).reshape(-1,len(self.bodyParts)*3)
         
-    def getDataFrameOut(self):
+    def getDataFrameOut(self, pathVideoFile):
         """
         Transform self.out into a pandas data frame, with the column names.
         """
         
-        if self.out is None:
-            print("please run loadPositionData first")
+        if not os.path.isfile(pathVideoFile): 
+            print(pathVideoFile + " does not exist")
             return False
+        self.pathVideoFile = pathVideoFile
+        
+        self.loadPositionData(self.pathVideoFile)
         
         cn = [[part+".x", part+".y", part+".prob"]for part in self.bodyParts]
         colnames = [item for sublist in cn for item in sublist]
         return pd.DataFrame(data=self.out,columns=colnames)
-        
-        
+          
     def getVideoOutputH5(self, pathVideoFile,shuffle=1,trainingsetindex=0, modelprefix=""):
         """
         Get the name of the file with the position data that is generated during inference
@@ -115,6 +146,7 @@ class dlc():
             print(pathVideoFile + " does not exist")
             return False
         
+        self.pathVideoFile=pathVideoFile
         directory = os.path.dirname(pathVideoFile)
         video = os.path.basename(pathVideoFile)
         
@@ -133,14 +165,4 @@ class dlc():
         cfg = auxiliaryfunctions.read_config(self.pathConfigFile)
         self.bodyParts = auxiliaryfunctions.IntersectionofBodyPartsandOnesGivenbyUser(
         cfg, "all")
-        
-
-class LeverDetector(dlc):
-    """
-    Class to implement the detection of the bridge using a deeplabcut model
-    
-    """
-    def __init__(self, pathConfigFile):
-        super.__init__(self,pathConfigFile)
-
         
