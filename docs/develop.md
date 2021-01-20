@@ -47,9 +47,12 @@ source ~/python_virtual_environments/autopi37/bin/activate
 ## Install a few needed packages
 
 If you are using a proxy, you might have to set this shell variable if it is not already set.
+
 ```
 echo $https_proxy
 export https_proxy=www-int2.inet.dkfz-heidelberg.de:80
+```
+
 ```
 python3.7 -m pip install --upgrade pip
 pip install deeplabcut
