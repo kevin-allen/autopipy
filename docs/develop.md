@@ -148,6 +148,7 @@ I presume that the wheel is probably python-version-specific, so build it from a
 You can find more information [here](https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html).
 
 ```
+cd python_virtual_environments/
 deactivate
 python3.7 -m venv xwPy_build
 cd xwPy_build/
@@ -156,6 +157,7 @@ pip install -U pip
 pip install -U six wheel setuptools
 pip install python-config
 pip download wxPython
+# next line will take about 15-20 minutes
 pip wheel wxPython-4.1.1.tar.gz
 ```
 
@@ -201,7 +203,7 @@ If you are developing a package, you probably want to include the directory into
 You can set this in your `~/.bashrc`
 
 ```
-eamcs ~/.bashrc
+emacs ~/.bashrc
 ```
 Add this at the end.
 ```
@@ -211,7 +213,7 @@ Open a new terminal and test it.
 
 ```
 source ~/python_virtual_environments/autopi37/bin/activate
-python -c "import detectArenaCoordinates"
+python -c "import dlc"
 ```
 
 ## Upload to testpypi
