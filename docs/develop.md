@@ -212,7 +212,7 @@ pip install jedi==0.17.2
 
 ## Manually add your package to the PYTHONPATH variable
 
-If you are developing a package, you probably want to include the directory into the shell variable PYTHONPATH.
+If you are developing a package, you might want to include the directory into the shell variable PYTHONPATH.
 You can set this in your `~/.bashrc`
 
 ```
@@ -220,7 +220,7 @@ emacs ~/.bashrc
 ```
 Add this at the end.
 ```
-export PYTHONPATH="${PYTHONPATH}:/home/kevin/repo/autopipy/src/autopipy/"
+export PYTHONPATH="${PYTHONPATH}:/home/kevin/repo/autopipy/autopipy/"
 ```
 Open a new terminal and test it.
 
@@ -228,6 +228,13 @@ Open a new terminal and test it.
 source ~/python_virtual_environments/autopi37/bin/activate
 python -c "import dlc"
 ```
+## Install the package for development
+
+```
+pip install -e ~/repo/autopipy
+```
+Changes made to the source will propagate when importing the package.
+
 
 ## Upload to testpypi
 
