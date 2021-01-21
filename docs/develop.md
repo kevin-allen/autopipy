@@ -9,6 +9,11 @@ This might not be needed when using the package later on, since it could run eas
 
 ## Install the right python version
 
+If you have a virtual environment activated, deactivate it.
+```
+conda deactivate
+```
+
 One principal consideration was to be able to use deeplabcut with tensorflow-GPU. 
 
 The version of tensorflow available from pypi works with tensorflow 1.15, which is avaialbe with python3.7. So that chose the python version for me: **3.7**
@@ -16,7 +21,7 @@ The version of tensorflow available from pypi works with tensorflow 1.15, which 
 ```
 sudo apt update
 sudo apt install software-properties-common
-sudo add-apt-repository ppa:deadsnakes/ppa
+sudo -E add-apt-repository ppa:deadsnakes/ppa
 sudo apt install python3.7
 sudo apt-get install python3.7-dev
 python3.7 --version
@@ -25,11 +30,8 @@ sudo apt install python3.7-venv
 
 ## Set up a virtual environment from scratch for development
 
-We will use `venv` to create the virtual environments. You might have to install it on your system.
 
-```
-sudo apt-get install python3.7-venv
-```
+We will use `venv` to create the virtual environments. You might have to install it on your system.
 
 ```
 cd ~
