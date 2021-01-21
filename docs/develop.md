@@ -174,6 +174,19 @@ python -c "import wx; a=wx.App(); wx.Frame(None,title='hello world').Show(); a.M
 ```
 The test should open a window. Just close it.
 
+
+## Install jupyter lab
+
+I am doing most of the development in jupyter lab. I wrote the class in a cell before copy and paste it to a .py file when I am done. If you want to use jupyter lab
+
+```
+pip install jupyterlab
+```
+
+You should now have all you need to develop the autopipy package. Have fun.
+
+
+
 ## Saving the environment requirements
 
 You can save the requirement in the repository.
