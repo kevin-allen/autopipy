@@ -594,7 +594,7 @@ class bridgeDetector(dlc):
         """
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
-    def detectBridgeCoordinates(self,pathVideoFile,numFrames=1000, skip=300):
+    def detectBridgeCoordinates(self,pathVideoFile,numFrames=1000, skip=300, tmpDir="/tmp/"):
         """
         Perform bridge detection on a range of frames from a video
         
@@ -612,7 +612,11 @@ class bridgeDetector(dlc):
             top-left,bottom-left,bottom-right,top-right
         """
         
-        pathTmpVideo = '/tmp/tmpVid.avi'
+        if not os.path.isdir(tmpdir):
+            print(tmpdir+" is not a directory")
+            return 0
+        
+        pathTmpVideo = tmpDir+'tmpVid.avi'
         base = pathTmpVideo.split(".")[0]
         
         # remove any old files that might be there
