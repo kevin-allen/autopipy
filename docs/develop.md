@@ -75,10 +75,25 @@ For tensoflow==1.15, I had to use cuda 10.1 or 9.1
 
 I followed the instructions (here)[https://medium.com/@stephengregory_69986/installing-cuda-10-1-on-ubuntu-20-04-e562a5e724a0].
 
+On a computer with no system cuda installation, try the following.
+
+```
+sudo apt update
+sudo -E add-apt-repository ppa:graphics-drivers
+sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
+sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda_learn.list'
+```
+
 **Trick:** If you are behind a proxy, you might want to get briefly mobile internet to run the `sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub` command.
 
+```
+sudo apt update
+sudo apt install cuda-10-1
+sudo apt install libcudnn7
+```
 
-I had to force an overwrite when installing to get rid of an error.
+One one computer, I had to force an overwrite when installing to get rid of an error.
 
 ```
 sudo apt-get -o Dpkg::Options::="--force-overwrite" install --fix-broken
