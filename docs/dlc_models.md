@@ -23,9 +23,8 @@ You can use the classes defined in dlcObjectDetectors.py to use these models for
 * leverDetector
 * mouseLeverDetector
 * bridgeDetector
-* arenaDetector: Detect the arena in video
 
-
+Tips: The arenaDetector class is not using dlc and is stored in cvObjectDetectors.py
 
 
 ```
