@@ -7,8 +7,10 @@ These classes inherits from the dlc class, so they can easily do inference, labe
 from dlc import dlc
 import os.path
 import numpy as np
+from scipy.stats import mode  
 import pandas as pd
 import cv2
+import glob
 
 
 class leverDetector(dlc):
@@ -439,4 +441,233 @@ class mouseLeverDetector(dlc):
             frame = cv2.putText(frame, "{:.1f} {:.1f}".format(onePosiOri[inds+0],onePosiOri[inds+1]), (50,200), cv2.FONT_HERSHEY_SIMPLEX ,  
                                                  0.75, (0,200,1), 1, cv2.LINE_AA)
             
+
+
+class bridgeDetector(dlc):
+    """
+    Class to implement the detection of the bridge using a deeplabcut model
+    This class inherits from dlc, but has additional functions that are specific to the bridge.
+    For example, it can calculate the position of the center of the bridge
+    
+    It assumes that the 2 parts of the bridge are detected by deeplabcut
+        leftAnt
+        rightAnt
+         
+    Methods
+        positionFromFile() calculate the position and orientation for all the data in the .h5 file
+        positionOneFrame() calculate the position and orientation for one frame
+        labelVideoBridge() label a video
+        detectionImage() add points and line to an image to show the lever detection.
+        
+    """
+    def __init__(self, pathConfigFile):
+        super().__init__(pathConfigFile)
+        
+        self.requiredBodyParts = ['leftAnt', 'rightAnt']
+        if not self.bodyParts == self.requiredBodyParts :
+            print("The body parts are not equal to"+self.requiredBodyParts)
+            return False
+        
+    def positionFromFile(self,pathVideoFile):
+        """
+        Calculate the position of the end of the bridge
+        
+        Output is stored in self.posiOri
+        
+        Format, leftAnt.x leftAnt.y, rightAnt.x, rightAnt.x, center.x, center.y
+        
+        """
+        if not os.path.isfile(pathVideoFile): 
+            print(pathVideoFile + " does not exist")
+            return False
+        
+        self.pathVideoFile=pathVideoFile
+        
+        # get the tracking data from file
+        self.loadPositionData(self.pathVideoFile) # load from file to self.out
+        
+        self.posi = np.apply_along_axis(self.positionOneFrame, 1, self.out)
+
+    def positionOneFrame(self,frameTrackingData,probThreshold = 0.5):
+        """
+        Function to get the position of the bridge based on deeplabcut detection.
+        
+        The 0,0 coordinates are top-left
+        If the probability is below the threshold, return None
+    
+        Arguments
+            frameTrackingData 1D numpy array containing the tracking values for one frame
+        Return
+            Array with [leftAnt.x, leftAnt.y, rightAnt.x, rightAnt.x, center.x, center.y]
+                
+        """
+    
+        if frameTrackingData[2] < probThreshold or frameTrackingData[5] < probThreshold:
+            return [np.NaN,np.NaN,np.NaN,np.NaN,np.NaN]
+    
+        ## middle point at the back of the lever (it does not matter if the two points are swapped, which is good)
+        x = (frameTrackingData[0]+frameTrackingData[3])/2
+        y = (frameTrackingData[1]+frameTrackingData[4])/2
+
+        return [frameTrackingData[0],frameTrackingData[1], frameTrackingData[3], frameTrackingData[4],x,y]
+
+        
+    def labelVideoBridge(self,pathVideoFile,pathOutputFile):
+        """
+        Function to create a label video specific to lever detection
+        
+        This is similar to the labelVideo() function of deeplabcut. 
+        But in addition it shows the center of the edge of the bridge
+        
+        Arguments
+            pathVideoFile: video to get the frames from
+            pathOutputFile: labeled video to create
+        """
+        if not os.path.isfile(pathVideoFile): 
+            print(pathVideoFile + " does not exist")
+            return False
+        self.pathVideoFile = pathVideoFile
+        
+        # load data from file and get lever center and orientation
+        self.positionFromFile(self.pathVideoFile) # see self.out and self.posi
+        
+        # pathOutputFile
+        cap = cv2.VideoCapture(self.pathVideoFile)
+        # Check if camera opened successfully
+        if (cap.isOpened()== False): 
+            print("Error opening video stream or file")
+    
+    
+        # read one frame to get the size
+        ret, frame = cap.read()
+        width  = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
+        height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT) # float
+        frameRate = cap.get(cv2.CAP_PROP_FPS) # float
+        
+
+        # move back so that the user can see this frame
+        current_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)-1
+        cap.set(cv2.CAP_PROP_POS_FRAMES,current_frame)
+    
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        out = cv2.VideoWriter(pathOutputFile, fourcc , frameRate, (int(width),int(height)))
+      
+        ## loop through the video
+        index = 0
+        numFrames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        numOut = self.out.shape[0]
+        if numFrames != numOut:
+            print("Number of tracking points not equal to number of frames in video")
+            return False
+        print("Creating " + pathOutputFile)
+        while(cap.isOpened() and index < numFrames ):
+            ret, frame = cap.read() 
+            self.detectionImage(frame,self.out[index,],self.posi[index,]) # will modify frame
+            out.write(frame)   
+            index=index+1
+        out.release()
+        cap.release()
+       
+    def detectionImage(self,frame,oneOut,onePosi):
+        """
+        Takes an image and position data and draw the detection on the image
+        The function is used when labelling videos
+        
+        Arguments:
+            frame An opencCV image
+            oneOut numpy array with the tracking data of one frame
+            onePosi numpy array with the position of the bridge
+        """
+        
+        ## open cv drawings
+        if np.isnan(onePosi[0]):
+            frame = cv2.putText(frame, "No bridge detected", (50,50), cv2.FONT_HERSHEY_SIMPLEX ,  
+                                             1, (100,200,0), 2, cv2.LINE_AA) 
+        else :    
+            frame = cv2.circle(frame, (int(onePosi[0]),int(onePosi[1])), radius=4, color=(0, 255, 0), thickness=-1)
+            frame = cv2.circle(frame, (int(onePosi[2]),int(onePosi[3])), radius=4, color=(0, 255, 0), thickness=-1)
+            frame = cv2.circle(frame, (int(onePosi[4]),int(onePosi[5])), radius=4, color=(255, 255, 0), thickness=-1)
+        
+    def __str__(self):
+        """
+        Print function
+        """
+        return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
+    
+    def detectBridgeCoordinates(self,pathVideoFile,numFrames=1000, skip=300):
+        """
+        Perform bridge detection on a range of frames from a video
+        
+        It will create a new video in the /tmp/ directory to perform the analysis using dlc.
+        
+        Assumes that the bridge is at the top of the image
+        
+        Arguments:
+            pathVideoFile File from which to get the frame from
+            numFrames Number of frames to analyze
+            skip Number of frames to skip at the beginning of the video file
+        
+        Returns
+            4x2 np.array containing the coordinates of the bridge
+            top-left,bottom-left,bottom-right,top-right
+        """
+        
+        pathTmpVideo = '/tmp/tmpVid.avi'
+        base = pathTmpVideo.split(".")[0]
+        
+        # remove any old files that might be there
+        fileList = glob.glob(base+"*")
+        for file in fileList:
+            os.remove(file)
+    
+        if not os.path.isfile(pathVideoFile):
+            print(pathVideoFile + " does not exist")
+            return False
+
+        count = 0 
+        cap = cv2.VideoCapture(pathVideoFile)
+
+        fps = int (cap.get(cv2.CAP_PROP_FPS))
+        width = int (cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int (cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        out = cv2.VideoWriter(pathTmpVideo, cv2.VideoWriter_fourcc(*'MJPG'), fps, (width,height)) 
+
+        while cap.isOpened() and count < numFrames + skip: 
+            ret, frame = cap.read() 
+            count = count+1 
+            if not ret: 
+                print("Can't receive frame (stream end?). Exiting ...") 
+                break 
+            if count > skip: 
+                out.write(frame) 
+             
+        cap.release() 
+        out.release() 
+           
+        print(pathTmpVideo+" created for bridge detection") 
+        
+        
+        self.inferenceVideo(pathTmpVideo)
+        
+        # get the position of the bridge, now in self.posi
+        self.positionFromFile(pathTmpVideo) 
+        # self.posi now has this information per frame leftAnt.x, leftAnt.y, rightAnt.x, rightAnt.x, center.x, center.y 
             
+        # remove old files
+        fileList = glob.glob(base+"*")
+        for file in fileList:
+            os.remove(file)
+        
+        # get the mode of leftAnt.x, leftAnt.y, rightAnt.x, rightAnt.y
+        x1 = mode(self.posi[:,0].astype(int))[0]
+        y1 = mode(self.posi[:,1].astype(int))[0]
+        x2 = mode(self.posi[:,2].astype(int))[0]
+        y2 = mode(self.posi[:,3].astype(int))[0]
+        
+        self.bridgeCoordinates = np.array([[x1[0],0],
+                         [x1[0],y1[0]],
+                         [x2[0],y2[0]],
+                         [x2[0],0]])
+        # we extend the bridge to the top edge of the image
+        return self.bridgeCoordinates

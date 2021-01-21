@@ -44,6 +44,12 @@ class session:
             if os.path.isfile(self.fileBase + "." + "arena_top.cropped.avi"):
                 self.arenaTopCropped=True  
         
+        # create a dictonary to quickly get the file names.
+        self.fileNames = {"log": self.fileBase+".log",
+                         "protocol": self.fileBase+".protocol",
+                         "arena_top.avi": self.fileBase+".arena_top.avi",
+                         "arena_top.cropped.avi": self.fileBase+".arena_top.cropped.avi"}
+        
         return
         
     def checkSessionDirectory(self):
