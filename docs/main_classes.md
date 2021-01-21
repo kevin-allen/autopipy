@@ -10,9 +10,11 @@ We will also have classes to perform specific analysis, for example for video de
 * trial: Representing a single trial
 * dlc: Class to run DeepLabCut inference
 * leverDetector: Detect the lever in video, inherits from dlc
+* arenaDetector: Detect the arena in video
 
 ## To be written
 
-* arenaDetector
+* calculate an arena arenaMask to remove outside of arena
+* crop image for neural network
 * bridgeDetector
-* mouseLeverDetector
+

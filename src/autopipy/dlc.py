@@ -166,3 +166,10 @@ class dlc():
         self.bodyParts = auxiliaryfunctions.IntersectionofBodyPartsandOnesGivenbyUser(
         cfg, "all")
         
+    def __str__(self):
+        """
+        Print function
+        """
+        return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
+    
+        
