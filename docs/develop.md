@@ -189,7 +189,7 @@ You should now have all you need to develop the autopipy package. Have fun.
 
 ## Saving the environment requirements
 
-You can save the requirement in the repository.
+You can save the requirement in the repository. 
 
 ```
 pip freeze > ~/repo/autopipy/requirements.txt
@@ -210,30 +210,15 @@ I downgraded jedi from version from 0.18.0 to 0.17.2 and it started to work.
 pip install jedi==0.17.2
 ```
 
-## Manually add your package to the PYTHONPATH variable
-
-If you are developing a package, you might want to include the directory into the shell variable PYTHONPATH.
-You can set this in your `~/.bashrc`
-
-```
-emacs ~/.bashrc
-```
-Add this at the end.
-```
-export PYTHONPATH="${PYTHONPATH}:/home/kevin/repo/autopipy/autopipy/"
-```
-Open a new terminal and test it.
-
-```
-source ~/python_virtual_environments/autopi37/bin/activate
-python -c "import dlc"
-```
 ## Install the package for development
 
 ```
+source ~/python_virtual_environments/autopi37/bin/activate
 pip install -e ~/repo/autopipy
+python -c "import dlc"
 ```
-Changes made to the source will propagate when importing the package.
+
+With `pip install -e`, changes made to the source will propagate when importing the package.
 
 
 ## Upload to testpypi
