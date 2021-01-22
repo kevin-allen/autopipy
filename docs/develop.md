@@ -1,11 +1,14 @@
 # To development the autopipy package
 
-Here are some notes on my python environment that I used to work on autopipy. This was my first python package so it might not be the optimal organization.
+Here are some notes on my python environment that I used to work on autopipy. 
+This was my first python package so it might not be the optimal organization.
+I did not want to use a conda enviroronment to do the development.
 
 * [Example of python package] (https://github.com/pypa/sampleproject)
 
 This describe most of the steps needed to get a virtuel environment working with deeplabcut and tensorflow. 
-This might not be needed when using the package later on, since it could run easily in the conda environment for deeplabcut.
+
+A simpler installation procedure will be soon available using a conda environment.
 
 ## Install the right python version
 
@@ -175,6 +178,17 @@ python -c "import wx; a=wx.App(); wx.Frame(None,title='hello world').Show(); a.M
 The test should open a window. Just close it.
 
 
+## Install the autopipy package for development
+
+```
+source ~/python_virtual_environments/autopi37/bin/activate
+pip install -e ~/repo/autopipy
+python -c "import dlc"
+```
+
+With `pip install -e`, changes made to the source will propagate when importing the package.
+
+
 ## Install jupyter lab
 
 I am doing most of the development in jupyter lab. I wrote the class in a cell before copy and paste it to a .py file when I am done. If you want to use jupyter lab
@@ -187,20 +201,6 @@ You should now have all you need to develop the autopipy package. Have fun.
 
 
 
-## Saving the environment requirements
-
-You can save the requirement in the repository. 
-
-```
-pip freeze > ~/repo/autopipy/requirements.txt
-```
-
-If you download the repository on a new computer, you can install the requirements with pip.
-
-```
-python -m pip install -r ~/repo/autopipy/requirements.txt
-```
-
 ## Completion in ipython
 
 I had a problem when I used the tab completion in ipython. It would crash.
@@ -210,16 +210,16 @@ I downgraded jedi from version from 0.18.0 to 0.17.2 and it started to work.
 pip install jedi==0.17.2
 ```
 
-## Install the package for development
+
+## Reload a module
+
+After changing the source code of a package, you can run the reload function update the code that you are running.
+For example, here is how to reload a module of autopipy.
 
 ```
-source ~/python_virtual_environments/autopi37/bin/activate
-pip install -e ~/repo/autopipy
-python -c "import dlc"
+import importlib
+importlib.reload(autopipy.video_utilities)
 ```
-
-With `pip install -e`, changes made to the source will propagate when importing the package.
-
 
 ## Upload to testpypi
 
@@ -236,4 +236,21 @@ To install autopipy
 
 ```
 pip install -i https://test.pypi.org/simple/ autopipy-kevinallen==0.0.2
+```
+
+
+
+
+## Saving the environment requirements
+
+You can save the requirement in the repository. 
+
+```
+pip freeze > ~/repo/autopipy/requirements.txt
+```
+
+If you download the repository on a new computer, you can install the requirements with pip.
+
+```
+python -m pip install -r ~/repo/autopipy/requirements.txt
 ```
