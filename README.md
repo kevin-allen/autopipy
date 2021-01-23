@@ -6,4 +6,4 @@ I decided to write this package to make it possible to use all the tool we need 
 
 Find the source code on [github](https://github.com/kevin-allen/autopipy).
 
-The documentation is in the [docs directory](https://github.com/kevin-allen/autopipy/docs/main.md).
+The documentation is in the [docs](https://github.com/kevin-allen/autopipy/tree/master/docs/main.md) directory.
