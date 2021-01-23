@@ -11,10 +11,6 @@ This is the documentation for the python package autopipy. This package can be u
 
 ## To implement asap
 
-* bridgeDetector on a subset of frames taken from a video
-* calculate an arena arenaMask to remove outside of arena
-* crop image for neural network
-
 
 ## Models to train
 
