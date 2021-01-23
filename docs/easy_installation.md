@@ -4,6 +4,8 @@ The simplest way to install the autopipy package is to first install a deeplabcu
 
 You can find the steps to install deeplabcut on their [github repository](https://github.com/DeepLabCut/DeepLabCut).
 
+If you are not doing inference with deeplabcut, you don't need tensorflow with GPU support.
+
 ```{python}
 conda activate DLC-GPU 
 cd ~/repo
