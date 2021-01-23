@@ -183,7 +183,7 @@ The test should open a window. Just close it.
 ```
 source ~/python_virtual_environments/autopi37/bin/activate
 pip install -e ~/repo/autopipy
-python -c "import dlc"
+python -c "import autopipy.dlc"
 ```
 
 With `pip install -e`, changes made to the source will propagate when importing the package.
