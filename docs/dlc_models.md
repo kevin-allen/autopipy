@@ -18,7 +18,9 @@ The config file for these models is the `config.yaml` file in the directories li
 * **bridgeDetection_480_480-Allen-2020-11-06**: detect bridge in 480 x 480 videos
 * **leverDetector-Allen-2020-09-29**: detect the lever in 640 x 480 videos
 
-These directories normally contains all the data required to re-train and evaluate the models. To run inference with autopipy, all you need is the `config.yaml` file and the `dlc-models` directory.
+These directories normally contains all the data required to re-train and evaluate the models. 
+
+To run inference with autopipy, all you really need is the `config.yaml` file and the `dlc-models` directory.
 
 
 ## Retraining
