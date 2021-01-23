@@ -11,8 +11,7 @@ from scipy.stats import mode
 import pandas as pd
 import cv2
 import glob
-import sys.stdout
-
+import sys
 
 class leverDetector(dlc):
     """

@@ -4,6 +4,8 @@ import os.path
 import h5py
 import numpy as np
 import pandas as pd
+import os 
+
 
 class dlc():
     """
@@ -38,7 +40,7 @@ class dlc():
         
         self.getBodyParts()
     
-    def inferenceVideo(self, pathVideoFile, saveCsv = True):
+    def inferenceVideo(self, pathVideoFile, saveCsv = True, overwrite=False):
         """
         Perform inference on a video with our model.
         Simply runs deeplabcut.analyze_videos()
@@ -53,11 +55,17 @@ class dlc():
         
         self.pathVideoFile = pathVideoFile
         
+        # get the name of the file with the output data
+        self.pathVideoOutputH5=self.getVideoOutputH5(pathVideoFile)
+        
+        if overwrite:
+            print("Removing previous inference data: " + self.pathVideoOutputH5)
+            os.remove(self.pathVideoOutputH5)
+        
+        
         print("Running dlc.analyze_video on "+ pathVideoFile)
         deeplabcut.analyze_videos(self.pathConfigFile,[pathVideoFile])
         
-        # get the name of the file with the output data
-        self.pathVideoOutputH5=self.getVideoOutputH5(pathVideoFile)
         
         # load the position data by default
         self.loadPositionData(pathVideoFile)
