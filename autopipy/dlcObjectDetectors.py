@@ -4,13 +4,14 @@ This file contains the object detectors that are based on dlc models
 These classes inherits from the dlc class, so they can easily do inference, label video, etc.
 """
 
-from dlc import dlc
+from autopipy.dlc import dlc
 import os.path
 import numpy as np
 from scipy.stats import mode  
 import pandas as pd
 import cv2
 import glob
+import sys.stdout
 
 
 class leverDetector(dlc):
@@ -364,34 +365,34 @@ class mouseLeverDetector(dlc):
         if (cap.isOpened()== False): 
             print("Error opening video stream or file")
     
-        # read one frame to get the size
-        ret, frame = cap.read()
         width  = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
         height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT) # float
         frameRate = cap.get(cv2.CAP_PROP_FPS) # float
-        
+        nFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        # move back so that the user can see this frame
-        current_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)-1
-        cap.set(cv2.CAP_PROP_POS_FRAMES,current_frame)
-    
         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
         out = cv2.VideoWriter(pathOutputFile, fourcc , frameRate, (int(width),int(height)))
       
         ## loop through the video
         index = 0
-        numFrames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        
         numOut = self.out.shape[0]
-        if numFrames != numOut:
+        if nFrames != numOut:
             print("Number of tracking points not equal to number of frames in video")
             return False
-    
-        print("Saving label video in " + pathOutputFile)
-        while(cap.isOpened() and index < numFrames ):
+        
+        print("Saving labeled video in " + pathOutputFile)
+        while(cap.isOpened() and index < nFrames ):
             ret, frame = cap.read() 
             self.detectionImage(frame,self.out[index,],self.posiOri[index,]) # will modify frame
-            out.write(frame)   
-            index=index+1
+            out.write(frame)
+            if index % 10 == 0:
+                sys.stdout.write('\r')
+                sys.stdout.write("{} of {} frames".format(index,nFrames))
+                sys.stdout.flush()
+            index+=1
+                
+            
         out.release()
         cap.release()
         
@@ -603,17 +604,18 @@ class bridgeDetector(dlc):
         Assumes that the bridge is at the top of the image
         
         Arguments:
-            pathVideoFile File from which to get the frame from
-            numFrames Number of frames to analyze
-            skip Number of frames to skip at the beginning of the video file
+            pathVideoFile: File from which to get the frame from
+            numFrames: Number of frames to analyze
+            skip: Number of frames to skip at the beginning of the video file
+            tmpDir: Directory where to do the detection
         
         Returns
             4x2 np.array containing the coordinates of the bridge
             top-left,bottom-left,bottom-right,top-right
         """
         
-        if not os.path.isdir(tmpdir):
-            print(tmpdir+" is not a directory")
+        if not os.path.isdir(tmpDir):
+            print(tmpDir+" is not a directory")
             return 0
         
         pathTmpVideo = tmpDir+'tmpVid.avi'
@@ -668,10 +670,39 @@ class bridgeDetector(dlc):
         y1 = mode(self.posi[:,1].astype(int))[0]
         x2 = mode(self.posi[:,2].astype(int))[0]
         y2 = mode(self.posi[:,3].astype(int))[0]
-        
+       
+        # we extend the bridge to the top edge of the image, this is heading into the home base.
+        # top-left, bottom-left, bottom-right, top-right
         self.bridgeCoordinates = np.array([[x1[0],0],
                          [x1[0],y1[0]],
                          [x2[0],y2[0]],
                          [x2[0],0]])
-        # we extend the bridge to the top edge of the image
+       
+        
         return self.bridgeCoordinates
+
+
+    def labelImage(self,pathVideoFile,outputImageFile):
+        """
+        Save an image in a file with the detected bridge
+        
+        Arguments:
+            pathVideoFile
+            outputImageFile
+        """
+        if not os.path.isfile(pathVideoFile): 
+            print(pathVideoFile + " does not exist")
+            return False
+           
+        self.pathVideoFile = pathVideoFile
+        cap = cv2.VideoCapture(self.pathVideoFile)
+        ret, frame = cap.read()
+        
+        for i in range(self.bridgeCoordinates.shape[0]):
+            cv2.circle(frame,(self.bridgeCoordinates[i,0],self.bridgeCoordinates[i,1]),3,(0,255,0),2)
+           
+        # save the last frame with detected circle
+        print("labelImage: " + outputImageFile)
+        cv2.imwrite(outputImageFile,frame)
+
+        

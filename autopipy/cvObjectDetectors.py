@@ -77,7 +77,13 @@ class arenaDetector:
         return self.coordinates
     
     def labelImage(self,pathVideoFile,outputImageFile):
+        """
+        Save an image in a file with the detected arena
         
+        Arguments:
+            pathVideoFile
+            outputImageFile
+        """
         if not os.path.isfile(pathVideoFile): 
             print(pathVideoFile + " does not exist")
             return False
