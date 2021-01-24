@@ -1,6 +1,7 @@
 # Running code on a remote server.
 
-If your computer does not have a good GPU, you can install DLC and autopipy on the computer with the GPU. If you start the jupyter lab server, you should be able to access it from a different computer using its IP address.
+If your computer does not have a good GPU, you can install DLC and autopipy on a computer with the GPU. If you launch a jupyter lab server on the remote-GPU computer, you can then use your browser on your computer to access the jupyter lab server running on the remote-GPU computer. This is a 2-step process.
+
 
 First ssh into the computer with the GPU, activate the right conda environment and launch jupyter lab.
 
@@ -11,7 +12,7 @@ cd ~/repo
 jupyter lab --no-browser
 ```
 
-Open a second terminal on your local computer.
+In a second terminal on your local computer, run the following ssh command.
 This command forwards the remote port 8888 onto our local machine’s port 8888.
 
 ``` 
