@@ -415,13 +415,14 @@ class mouseLeverDetector(dlc):
 
             # lever direction
             inds=0
+            # lever orientation line
             frame = cv2.line(frame,(int(onePosiOri[inds+0]),int(onePosiOri[inds+1])),(int(onePosiOri[inds+0]+onePosiOri[inds+3]),int(onePosiOri[inds+1]+onePosiOri[inds+4])),(255,200,0),2)
-            # lever position
+            # lever position circle
             frame = cv2.circle(frame, (int(onePosiOri[inds+0]),int(onePosiOri[inds+1])), radius=4, color=(0, 255, 0), thickness=-1)
-            # lever orientation
+            # lever orientation text
             frame = cv2.putText(frame, "{:.1f}".format(onePosiOri[inds+2]), (50,50), cv2.FONT_HERSHEY_SIMPLEX ,  
                                                  0.75, (100,200,0), 1, cv2.LINE_AA) 
-            # lever position
+            # lever position text
             frame = cv2.putText(frame, "{:.1f} {:.1f}".format(onePosiOri[inds+0],onePosiOri[inds+1]), (50,100), cv2.FONT_HERSHEY_SIMPLEX ,  
                                                  0.75, (100,200,0), 1, cv2.LINE_AA)
            
@@ -431,15 +432,16 @@ class mouseLeverDetector(dlc):
         else:
             # mouse direction
             inds=5
-            frame = cv2.line(frame,(int(onePosiOri[inds+0]),int(onePosiOri[inds+1])),(int(onePosiOri[inds+0]+onePosiOri[inds+3]*2),int(onePosiOri[inds+1]+onePosiOri[inds+4]*2)),(0,200,255),2)
-            # mouse position
+            # mouse orientaiton line
+            frame = cv2.line(frame,(int(onePosiOri[inds+0]),int(onePosiOri[inds+1])),(int(onePosiOri[inds+0]+onePosiOri[inds+3]*3),int(onePosiOri[inds+1]+onePosiOri[inds+4]*3)),(0,200,255),2) 
+            # mouse position dot
             frame = cv2.circle(frame, (int(onePosiOri[inds+0]),int(onePosiOri[inds+1])), radius=2, color=(255, 0, 0), thickness=-1)
-            # mouse orientation
+            # mouse orientation text
             frame = cv2.putText(frame, "{:.1f}".format(onePosiOri[inds+2]), (50,150), cv2.FONT_HERSHEY_SIMPLEX ,  
-                                                 0.75, (0,200,100), 1, cv2.LINE_AA) 
-            # mouse position
+                                                 0.75, (0,100,200), 1, cv2.LINE_AA) 
+            # mouse position text
             frame = cv2.putText(frame, "{:.1f} {:.1f}".format(onePosiOri[inds+0],onePosiOri[inds+1]), (50,200), cv2.FONT_HERSHEY_SIMPLEX ,  
-                                                 0.75, (0,200,1), 1, cv2.LINE_AA)
+                                                 0.75, (0,100,200), 1, cv2.LINE_AA)
             
 
 

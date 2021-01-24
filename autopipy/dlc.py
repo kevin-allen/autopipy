@@ -60,7 +60,8 @@ class dlc():
         
         if overwrite:
             print("Removing previous inference data: " + self.pathVideoOutputH5)
-            os.remove(self.pathVideoOutputH5)
+            if os.path.isfile(self.pathVideoOutputH5):
+                os.remove(self.pathVideoOutputH5)
         
         
         print("Running dlc.analyze_video on "+ pathVideoFile)

@@ -56,13 +56,13 @@ class session:
         # check that the directory is there
         if os.path.isdir(self.path) == False :
             print(self.path + "does not exist")
-            return False
+            raise IOError(self.path + " does not exist") # raise an exception
         # check that the files needed are there
         for ext in self.requiredFileExts:
             fileName = self.fileBase + "." + ext
             if os.path.isfile(fileName)== False:
                 print(fileName + " does not exist")
-                return False
+                raise IOError(fileName + " does not exist") # raise an exception
         return True
 
     def __str__(self):

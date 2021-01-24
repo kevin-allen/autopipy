@@ -136,4 +136,28 @@ def createMaskArenaBridge(imageWidth, imageHeight, arenaCoordinates, bridgeCoord
     
     return outsideMask
     
+
+def arenaBridgeDetectionImage(pathVideoFile, outputImageFile, arenaCoordinates, bridgeCoordinates,skip=30):
+    if not os.path.isfile(pathVideoFile):
+        print(pathVideoFile + " does not exist")
+        return False
     
+    cap = cv2.VideoCapture(pathVideoFile)
+    index=0
+    while index < skip:
+        ret, frame = cap.read()
+        index+=1
+    drawArena(frame, arenaCoordinates)
+    drawBridge(frame, bridgeCoordinates)
+     # save the last frame with detected circle
+    print("labelImage: " + outputImageFile)
+    cv2.imwrite(outputImageFile,frame)
+
+
+def drawBridge(frame, bCoord):
+    for i in range(bCoord.shape[0]):
+            cv2.circle(frame,(bCoord[i,0],bCoord[i,1]),3,(0,255,0),2)
+
+def drawArena(frame, aCoord):
+    cv2.circle(frame,(aCoord[0],aCoord[1]),aCoord[2],(0,255,0),2)
+    cv2.circle(frame,(aCoord[0],aCoord[1]),2,(0,0,255),3)
