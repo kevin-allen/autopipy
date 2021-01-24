@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Video processing
+# arena_top_video_processing
 # 
 # We will implement the first steps of video processing for a single recording session.
 # 
@@ -37,11 +37,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hp:m:",["projectDir=","modelDir="])
     except getopt.GetoptError:
-        print ('video_processing.py sessionName -p <projectDir> -m <modelDir>')
+        print ('arenaTopVideoProcessing.py sessionName -p <projectDir> -m <modelDir>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print ('video_processing.py -p <projectDir> -m <modelDir>')
+            print ('arenaTopVideoProcessing -p <projectDir> -m <modelDir>')
             sys.exit()
 
         elif opt in ("-p", "--projectDir"):
@@ -63,10 +63,10 @@ def main(argv):
     print ('projectDir: '+ projectDir)
     print ('modelDir: '+modelDir)
     print ("sessionPath: "+ sessionPath)
-    video_processing(sessionPath,sessionName,modelDir)
+    arenaTopVideoProcessing(sessionPath,sessionName,modelDir)
 
     
-def video_processing(sessionPath,sessionName,modelDir):
+def arenaTopVideoProcessing(sessionPath,sessionName,modelDir):
     
     s = session(path=sessionPath,name=sessionName)
 
