@@ -12,3 +12,11 @@ cd ~/repo
 git clone https://github.com/kevin-allen/autopipy.git
 pip install -e ~/repo/autopipy
 ```
+
+To run code, you can use jupyter lab. You will have to install it with conda.
+
+```
+conda install -c conda-forge jupyterlab
+```
+
+Then start the jupyter lab server.
