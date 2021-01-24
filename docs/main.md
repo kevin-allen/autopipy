@@ -4,6 +4,11 @@ This is the documentation for the python package autopipy. This package can be u
 
 If you want to use autopipy to do pose estimation with deeplabcut network, pose estimation will be much faster if you install a version of tensorflow/deeplabcut with GPU support. Of course you will also need a computer with a decent GPU. See the [deeplabcut documentation](https://github.com/DeepLabCut/DeepLabCut) for more information.
 
+The classes and most functions are defined in the `autopipy` folder.
+
+The scripts to run the main analysis steps are in the `scripts` folder
+
+
 ## Installation
 
 * [Easiest installation with DLC conda environment](easy_installation.md)
