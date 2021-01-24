@@ -12,3 +12,19 @@ cd ~/repo
 git clone https://github.com/kevin-allen/autopipy.git
 pip install -e ~/repo/autopipy
 ```
+
+To run code, you can use `jupyter notebook` or `jupyter lab`. I prefer using `jupyter lab` and you will need to add it to your DLC environment.
+
+```
+conda install -c conda-forge jupyterlab
+```
+If you have problem with the proxy and you are log in with ssh, try to log on with a desktop session on the computer or try to set the proxy in the file `.condarc`.
+
+Then start the jupyter lab server.
+
+```
+cd ~/repo
+jupyter lab
+```
+
+
