@@ -17,8 +17,6 @@
 # * Detect bridge in cropped video
 # * Detect the mouse and lever in cropped video
 # 
-
-
 import os.path
 import autopipy
 from autopipy.session import session
@@ -29,6 +27,7 @@ from autopipy.dlcObjectDetectors import mouseLeverDetector
 from autopipy.dlcObjectDetectors import mouseLeverDetector
 from autopipy.video_utilities import arenaBridgeDetectionImage
 import sys, getopt
+
 
 def main(argv):
     sessionName = ''
@@ -64,10 +63,12 @@ def main(argv):
     print ('projectDir: '+ projectDir)
     print ('modelDir: '+modelDir)
     print ("sessionPath: "+ sessionPath)
+    video_processing(sessionPath,sessionName,modelDir)
 
     
+def video_processing(sessionPath,sessionName,modelDir):
+    
     s = session(path=sessionPath,name=sessionName)
-
 
     videoFile = s.fileNames["arena_top.avi"] #Nice trick to get file names using a dict
     arenaImageFile=s.path+"/arenaDetection.png"
@@ -119,13 +120,6 @@ def main(argv):
                               arenaCoordinates = aCoord,
                               bridgeCoordinates = bCoord)
 
-    
-    
+        
 if __name__ == "__main__":
    main(sys.argv[1:])
-
-
-
-
-
-
