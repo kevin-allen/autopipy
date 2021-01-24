@@ -7,6 +7,7 @@ If you want to use autopipy to do pose estimation with deeplabcut network, pose 
 ## Installation
 
 * [Easiest installation with DLC conda environment](easy_installation.md)
+* [Running jupyter lab on a remote server](remote_jupyterlab_server.md)
 
 ## The code
 
