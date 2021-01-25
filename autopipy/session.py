@@ -5,20 +5,21 @@ class session:
     Class containing information about an autopi session
     
     Attributes:
-        path    Directory path of the data for this session
         name    Name of the session. Usually used as the beginning of the file names
+        path    Directory path of the data for this session
         fileBase path plus name
         arenaTopVideo Boolean indicating whether we should expect a video for the arnea
         homeBaseVide  Boolean indicating whether we should have a video of the home base
         requiredFileExts List containing the extensions of the file we should have in the directory
         arenaTopCropped Boolean indicating whether we have an arena top cropped video
+        dataFileCheck Boolean indicating whether to test for the presence of data file in the session directory
     
     Methods:
         checkSessionDirectory():
     """
-    def __init__(self,path,name,arenaTopVideo=True,homeBaseVideo=True):
-        self.path = path
+    def __init__(self,name,path,arenaTopVideo=True,homeBaseVideo=True, dataFileCheck=True):
         self.name = name
+        self.path = path
         self.fileBase = path+"/"+name
         self.arenaTopVideo = arenaTopVideo
         self.homeBaseVideo = homeBaseVideo
@@ -33,10 +34,12 @@ class session:
             self.requiredFileExts.append("home_base.log")
             
         # check that we have valid data
-        if self.checkSessionDirectory():
-            self.dirOk=True
-        else:
-            print("problem with the directory " + self.path)
+        if dataFileCheck:
+            if self.checkSessionDirectory():
+                self.dirOk=True
+            else:
+                print("problem with the directory " + self.path)
+                self.dirOk=False
     
         # check if we have an arena_top.cropped.avi file
         self.arenaTopCropped=False
