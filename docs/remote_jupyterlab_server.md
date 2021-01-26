@@ -11,6 +11,9 @@ conda activate DLC-GPU
 cd ~/repo
 jupyter lab --no-browser
 ```
+In the terminal, you will see an address looking like : `http://localhost:8888/?token=f74e097bf3a029eab5534bc9a17ba8fd54cdb26962ee34d8`.
+
+Copy it.
 
 *  In a second terminal on your local computer, run the following ssh command.
 This command forwards the remote port 8888 onto our local machine’s port 8888.
@@ -19,5 +22,6 @@ This command forwards the remote port 8888 onto our local machine’s port 8888.
 ssh -N -L 8888:localhost:8888 kevin@a230-pc73
 ```
 
-*  Point your browser to 127.0.0.1:8888. You will be asked for a tocken or password.
-Use the token that was printed when you started jupyter lab.
+*  Now paste the addressed of the jupyter server in your browser. The address should start with `http://localhost:8888/?token=`
+
+You should now have a jupyter lab page in your browser.
