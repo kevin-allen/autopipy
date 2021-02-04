@@ -6,11 +6,13 @@ If your computer does not have a good GPU, you can install DLC and autopipy on a
 *  ssh into the computer with the GPU, activate the right conda environment and launch jupyter lab.
 
 ```
-ssh a230-pc73 -X 
-conda activate DLC-GPU
+ssh a230-pc73
+conda activate DLC-GPU  # or source ~/python_virtual_environments/autopi37/bin/activate
 cd ~/repo
 jupyter lab --no-browser
 ```
+
+
 In the terminal, you will see an address looking like : `http://localhost:8888/?token=f74e097bf3a029eab5534bc9a17ba8fd54cdb26962ee34d8`.
 
 Copy it.
