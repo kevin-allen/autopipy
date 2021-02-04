@@ -58,8 +58,8 @@ class session:
     def checkSessionDirectory(self):
         # check that the directory is there
         if os.path.isdir(self.path) == False :
-            print(self.path + "does not exist")
             raise IOError(self.path + " does not exist") # raise an exception
+            
         # check that the files needed are there
         for ext in self.requiredFileExts:
             fileName = self.fileBase + "." + ext

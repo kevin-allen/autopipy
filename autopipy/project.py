@@ -1,4 +1,5 @@
 import os.path
+import pandas as pd
 from autopipy.session import session
 
 class project:
@@ -8,13 +9,13 @@ class project:
     
     Attributes:
         name    Project name
-        dataPath    Directory path of the data for this session
+        dataPath    Path of the directory containing the data for all the project
         dlcModelPath   Directory with the deeplabcut models
-        
         
     Methods:
         createSessionList()
-        runOnSession():
+        mouseNameFromSessionName()
+        sessionPathFromSessionName()
     """
     def __init__(self,name, dataPath, dlcModelPath):
         self.name = name
@@ -27,10 +28,31 @@ class project:
         return
 
     def mouseNameFromSessionName(self,sessionName):
+        """
+        Get the mouse name from the session name
+        
+        Function used to generate the list of session objects
+        """
         return sessionName.split("-")[0]
     
     def sessionPathFromSessionName(self, sessionName):
+        """
+        Get the full session path from the session name and the dataPath variable
+        
+        Used to generate the list of session objects
+        """
         return self.dataPath + "/" + self.mouseNameFromSessionName(sessionName)+ "/" + sessionName
     
     def createSessionList(self, sessionNameList):
+        """
+        Generate a sessionList for the project
+        
+        Arguments:
+            sessionNameList: A list of session names
+            
+        The list is stored in the project attribute sessionList 
+        """
+        if ! isinstance(sessionNameList,list):
+            raise TypeError("sessionNameList is not a list")
+            
         self.sessionList =  [ session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False) for sessionName in sessionNameList]
