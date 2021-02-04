@@ -52,7 +52,7 @@ class project:
             
         The list is stored in the project attribute sessionList 
         """
-        if ! isinstance(sessionNameList,list):
+        if not isinstance(sessionNameList,list):
             raise TypeError("sessionNameList is not a list")
             
         self.sessionList =  [ session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False) for sessionName in sessionNameList]
