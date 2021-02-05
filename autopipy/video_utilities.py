@@ -3,6 +3,12 @@ import numpy as np
 import cv2
 import sys
 
+from autopipy.session import session
+from autopipy.cvObjectDetectors import arenaDetector
+from autopipy.dlcObjectDetectors import bridgeDetector
+from autopipy.dlcObjectDetectors import mouseLeverDetector
+from autopipy.dlcObjectDetectors import mouseLeverDetector
+from datetime import datetime
 
 def maskCropVideoToBridgeArena(pathVideoFile, pathOutputFile, arenaCoordinates, bridgeCoordinates, outWidth=480, outHeight=480, arenaRadiusFactor=1.125, bridgeWidthFactor=1.5):
     """
@@ -161,3 +167,77 @@ def drawBridge(frame, bCoord):
 def drawArena(frame, aCoord):
     cv2.circle(frame,(aCoord[0],aCoord[1]),aCoord[2],(0,255,0),2)
     cv2.circle(frame,(aCoord[0],aCoord[1]),2,(0,0,255),3)
+
+
+
+
+def positionTrackingFromArenaTopVideo(ses,modelDir):
+    """
+    Function to do all the video processing to get the position of the animal on the arena
+
+    It will also get you the arena and bridge coordinates
+
+    Arguments
+        ses: A session object
+        modelDir: the directory containing the different dlc models
+    """
+
+    start_time = datetime.now()
+    print("Startint at", start_time.strftime("%H:%M:%S"))
+    
+    videoFile = ses.fileNames["arena_top.avi"] #Nice trick to get file names using a dict
+    arenaImageFile=ses.path+"/arenaDetection.png"
+    arenaD = arenaDetector()
+    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=180, 
+                                  maxRadius=220, numFrames=100, blur=11, circle='min')
+    arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
+
+    configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
+    bridgeImageFile = ses.path+"/bridgeDetection.png"
+    bridgeD = bridgeDetector(pathConfigFile=configFile)
+    bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=videoFile,numFrames=100, skip=30)
+    bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
+
+    now = datetime.now()
+    duration = now-start_time
+    print("Time elapsed", str(duration))  
+    
+    videoFile=ses.fileNames["arena_top.avi"]
+    croppedVideoFile = os.path.splitext(videoFile)[0]+".cropped.avi"
+    maskCropVideoToBridgeArena(pathVideoFile=videoFile, pathOutputFile=croppedVideoFile, 
+                               arenaCoordinates=aCoord, bridgeCoordinates = bCoord)
+
+    now = datetime.now()
+    duration = now-start_time
+    print("Time elapsed", str(duration))
+    
+    configFile=modelDir+"/arena_top-Allen-2019-10-30/config.yaml"
+    croppedVideoFile = os.path.splitext(videoFile)[0]+".cropped.avi"
+    mouseLeverD = mouseLeverDetector(pathConfigFile=configFile)
+    mouseLeverD.inferenceVideo(pathVideoFile=croppedVideoFile,overwrite=True)
+
+    labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
+    mouseLeverD.labelVideoMouseLever(pathVideoFile=croppedVideoFile,pathOutputFile=labeledVideoFile)
+
+    arenaImageFile=ses.path+"/arenaDetectionCropped.png"
+    arenaD = arenaDetector()
+    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=180, 
+                                  maxRadius=220, numFrames=100, blur=11, circle='min')
+    arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
+
+    configFile = modelDir+"/bridgeDetection_480_480-Allen-2021-01-23/config.yaml"
+    bridgeImageFile = ses.path+"/bridgeDetectionCropped.png"
+    bridgeD = bridgeDetector(pathConfigFile=configFile)
+    bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=100, skip=30)
+    bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
+
+    outputImageFile=ses.path+"/arenaBridgeDetectionCropped.png"
+    arenaBridgeDetectionImage(pathVideoFile=croppedVideoFile,
+                              outputImageFile=outputImageFile,
+                              arenaCoordinates = aCoord,
+                              bridgeCoordinates = bCoord)
+    end_time = datetime.now()
+    duration = end_time-start_time
+    print("Ending at ", end_time.strftime("%H:%M:%S"))
+    print("Total duration:", str(duration))
+

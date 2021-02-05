@@ -505,7 +505,7 @@ class bridgeDetector(dlc):
         """
     
         if frameTrackingData[2] < probThreshold or frameTrackingData[5] < probThreshold:
-            return [np.NaN,np.NaN,np.NaN,np.NaN,np.NaN]
+            return [np.NaN,np.NaN,np.NaN,np.NaN,np.NaN,np.NaN]
     
         ## middle point at the back of the lever (it does not matter if the two points are swapped, which is good)
         x = (frameTrackingData[0]+frameTrackingData[3])/2
