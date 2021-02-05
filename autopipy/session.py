@@ -87,6 +87,17 @@ class session:
         self.log = pd.read_csv(self.fileNames["log"],sep=" ")
         
         
+        # check that there is one start and end events
+        if len(self.log[self.log.event=="start"]) != 1:
+            raise RuntimeError("There should be one and only one start event in the log file") # raise an exception
+        if len(self.log[self.log.event=="end"]) != 1:
+            raise RuntimeError("There should be one and only one end event in the log file") # raise an exception
+            
+        # check that there are door events in the log
+        if ~(self.log.event.unique()=="door").any() :
+            raise RuntimeError("There should be door events in the log file") # raise an exception
+        
+        
         # get the door events after the start of the session
         doorEvents = self.log[np.logical_and(self.log.event=="door" ,
                                              (self.log.time - self.log.time[self.log.event=="start"].to_numpy()) > 0)]
