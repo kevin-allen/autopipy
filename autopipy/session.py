@@ -11,7 +11,7 @@ class session:
         path    Directory path of the data for this session
         fileBase path plus name
         arenaTopVideo Boolean indicating whether we should expect a video for the arnea
-        homeBaseVide  Boolean indicating whether we should have a video of the home base
+        homeBaseVideo  Boolean indicating whether we should have a video of the home base
         requiredFileExts List containing the extensions of the file we should have in the directory
         arenaTopCropped Boolean indicating whether we have an arena top cropped video
         dataFileCheck Boolean indicating whether to test for the presence of data file in the session directory

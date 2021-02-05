@@ -43,16 +43,20 @@ class project:
         """
         return self.dataPath + "/" + self.mouseNameFromSessionName(sessionName)+ "/" + sessionName
     
-    def createSessionList(self, sessionNameList):
+    def createSessionList(self, sessionNameList, needVideos=True):
         """
         Generate a sessionList for the project
         
         Arguments:
             sessionNameList: A list of session names
+            needVideos: Boolean determining whether the session object should have video files
             
         The list is stored in the project attribute sessionList 
         """
         if not isinstance(sessionNameList,list):
             raise TypeError("sessionNameList is not a list")
-            
-        self.sessionList =  [ session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False) for sessionName in sessionNameList]
+        
+        if needVideos:
+            self.sessionList =  [ session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False) for sessionName in sessionNameList]
+        else :
+            self.sessionList =  [ session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False, arenaTopVideo=False,homeBaseVideo=False) for sessionName in sessionNameList]
