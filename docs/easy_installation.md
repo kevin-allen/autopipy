@@ -18,7 +18,19 @@ To run code, you can use `jupyter notebook` or `jupyter lab`. I prefer using `ju
 ```
 conda install -c conda-forge jupyterlab
 ```
-If you have problem with the proxy and you are log in with ssh, try to log on with a desktop session on the computer or try to set the proxy in the file `.condarc`.
+
+If you have problem with the proxy and you are log in with ssh, it is probably because the HTTP_PROXY and HTTPS_PROXY environment variables are not set in your shell. You have a few options: 
+
+*  log on with a desktop session on the computer
+*  Set the proxy in the file `.condarc` or try to set the HTTP_PROXY and HTTPS_PROXY manually
+*  Set the environment variables manually in a terminal.
+
+For instance, you could run this in the terminal
+```
+export HTTP_PROXY=http://www-int2.inet.dkfz-heidelberg.de:80
+export HTTPS_PROXY=http://www-int2.inet.dkfz-heidelberg.de:80
+```
+
 
 Then start the jupyter lab server.
 
