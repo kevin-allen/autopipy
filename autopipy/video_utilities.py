@@ -216,9 +216,18 @@ def positionTrackingFromArenaTopVideo(ses,modelDir):
     mouseLeverD = mouseLeverDetector(pathConfigFile=configFile)
     mouseLeverD.inferenceVideo(pathVideoFile=croppedVideoFile,overwrite=True)
 
+    now = datetime.now()
+    duration = now-start_time
+    print("Time elapsed", str(duration))
+    
     labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
     mouseLeverD.labelVideoMouseLever(pathVideoFile=croppedVideoFile,pathOutputFile=labeledVideoFile)
 
+    now = datetime.now()
+    duration = now-start_time
+    print("Time elapsed", str(duration))
+    
+    
     arenaImageFile=ses.path+"/arenaDetectionCropped.png"
     arenaD = arenaDetector()
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=180, 
@@ -239,5 +248,5 @@ def positionTrackingFromArenaTopVideo(ses,modelDir):
     end_time = datetime.now()
     duration = end_time-start_time
     print("Ending at ", end_time.strftime("%H:%M:%S"))
-    print("Total duration:", str(duration))
+    print("***Total duration: {} ***".format(str(duration)))
 
