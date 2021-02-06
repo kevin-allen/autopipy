@@ -9,7 +9,7 @@ If your computer does not have a good GPU, you can install DLC and autopipy on a
 ssh a230-pc73
 conda activate DLC-GPU  # or source ~/python_virtual_environments/autopi37/bin/activate
 cd ~/repo
-jupyter lab --no-browser
+jupyter lab --no-browser --allow-root
 ```
 
 
