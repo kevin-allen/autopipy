@@ -245,7 +245,7 @@ class mouseLeverDetector(dlc):
         
         # create a DataFrame
         posiOri = pd.DataFrame(self.posiOri,
-             columns=["mouseX", "mouseY", "mouseOri", "mouseXHeading", "mouseYHeading", "leverX", "leverY", "leverOri", "leverXHeading", "leverYHeading"])
+             columns=["leverX", "leverY", "leverOri", "leverXHeading", "leverYHeading","mouseX", "mouseY", "mouseOri", "mouseXHeading", "mouseYHeading", ])
         # save to file
         posiOri.to_csv(fileName,index=False)
 

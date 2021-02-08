@@ -238,13 +238,15 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500)
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=180, 
                                   maxRadius=220, numFrames=100, blur=11, circle='min')
     arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
+    np.savetxt(ses.fileNames["arenaCoordinates"],aCoord,delimiter=",") 
 
     configFile = modelDir+"/bridgeDetection_480_480-Allen-2021-01-23/config.yaml"
     bridgeImageFile = ses.path+"/bridgeDetectionCropped.png"
     bridgeD = bridgeDetector(pathConfigFile=configFile)
     bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=100, skip=30)
     bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
-
+    np.savetxt(ses.fileNames["bridgeCoordinates",bCoord,delimiter=","])
+    
     outputImageFile=ses.path+"/arenaBridgeDetectionCropped.png"
     arenaBridgeDetectionImage(pathVideoFile=croppedVideoFile,
                               outputImageFile=outputImageFile,

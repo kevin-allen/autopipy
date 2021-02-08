@@ -67,7 +67,7 @@ class session:
                          "arena_top.cropped.avi": self.fileBase+".arena_top.cropped.avi",
                          "mouseLeverPosition.csv": self.fileBase+".mouseLeverPosition.csv",
                          "arenaCoordinates": self.path+"/"+"arenaCoordinates",
-                         "bridgeCoordinates": self.path+"/"+"bridgeDetection.cvs"} 
+                         "bridgeCoordinates": self.path+"/"+"bridgeCoordinates"} 
         return
         
     def checkSessionDirectory(self):
@@ -88,6 +88,7 @@ class session:
     
     def loadPositionTrackingData(self):
         self.mouseLeverPosi = pd.read_csv(self.fileNames["mouseLeverPosition.csv"])
+        self.videoLog = pd.read_csv(self.fileNames["arena_top.log"], delimiter=" ")
         self.arenaCoordinates = np.loadtxt(self.fileNames["arenaCoordinates"])
         self.bridgeCoordinates = np.genfromtxt(self.fileNames["bridgeCoordinates"],delimiter=",")
     
