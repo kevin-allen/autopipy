@@ -229,6 +229,29 @@ class mouseLeverDetector(dlc):
         """
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
+    def savePositionOrientationToFile(self,pathVideoFile,fileName):
+        """
+        1) Read the output of the inference
+        2) get position and orientation of mouse and lever
+        3) save the data in a csv file
+        """
+        if not os.path.isfile(pathVideoFile): 
+            print(pathVideoFile + " does not exist")
+            return False
+        self.pathVideoFile = pathVideoFile
+        
+        # load data from file and get lever center and orientation, position data are in self.posiOri
+        self.positionOientationFromFile(self.pathVideoFile)
+        
+        # create a DataFrame
+        posiOri = pd.DataFrame(self.posiOri,
+             columns=["mouseX", "mouseY", "mouseOri", "mouseXHeading", "mouseYHeading", "leverX", "leverY", "leverOri", "leverXHeading", "leverYHeading"])
+        # save to file
+        posiOri.to_csv(fileName,index=False)
+
+        
+        
+    
     def positionOientationFromFile(self,pathVideoFile):
         """
         Calculate the position and orientation of the mouse and lever for a video file

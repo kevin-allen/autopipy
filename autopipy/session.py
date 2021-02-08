@@ -7,19 +7,21 @@ class session:
     Class containing information about an autopi session
     
     Attributes:
-        name    Name of the session. Usually used as the beginning of the file names
-        path    Directory path of the data for this session
-        fileBase path plus name
-        arenaTopVideo Boolean indicating whether we should expect a video for the arnea
-        homeBaseVideo  Boolean indicating whether we should have a video of the home base
-        requiredFileExts List containing the extensions of the file we should have in the directory
-        arenaTopCropped Boolean indicating whether we have an arena top cropped video
-        dataFileCheck Boolean indicating whether to test for the presence of data file in the session directory
+        name: Name of the session. Usually used as the beginning of the file names
+        path: Directory path of the data for this session
+        fileBase: path + name
+        arenaTopVideo: Boolean indicating whether we should expect a video for the arnea
+        homeBaseVideo:  Boolean indicating whether we should have a video of the home base
+        requiredFileExts: List containing the extensions of the file we should have in the directory
+        arenaTopCropped: Boolean indicating whether we have an arena top cropped video
+        dataFileCheck: Boolean indicating whether to test for the presence of data file in the session directory
+        fileNames: Dictionary to get important file names
         log Data frame with the content of the log file
-    
+        
     Methods:
         checkSessionDirectory()
         loadLogFile()
+        loadPositionTrackingData()
         segmentTrialsFromLog()
         createTrialList()
     """
@@ -53,12 +55,19 @@ class session:
             if os.path.isfile(self.fileBase + "." + "arena_top.cropped.avi"):
                 self.arenaTopCropped=True  
         
-        # create a dictonary to quickly get the file names.
+        #####################################################
+        # create a dictonary to quickly get the file names ##
+        #########################################################
+        # all file names with important data should be set here #
+        #########################################################
         self.fileNames = {"log": self.fileBase+".log",
                          "protocol": self.fileBase+".protocol",
                          "arena_top.avi": self.fileBase+".arena_top.avi",
-                         "arena_top.cropped.avi": self.fileBase+".arena_top.cropped.avi"}
-        
+                         "arena_top.log": self.fileBase+".arena_top.log",
+                         "arena_top.cropped.avi": self.fileBase+".arena_top.cropped.avi",
+                         "mouseLeverPosition.csv": self.fileBase+".mouseLeverPosition.csv",
+                         "arenaCoordinates": self.path+"/"+"arenaCoordinates",
+                         "bridgeCoordinates": self.path+"/"+"bridgeDetection.cvs"} 
         return
         
     def checkSessionDirectory(self):
@@ -76,7 +85,12 @@ class session:
     
     def loadLogFile(self):
         self.log = pd.read_csv(self.fileNames["log"],sep=" ")
-    def
+    
+    def loadPositionTrackingData(self):
+        self.mouseLeverPosi = pd.read_csv(self.fileNames["mouseLeverPosition.csv"])
+        self.arenaCoordinates = np.loadtxt(self.fileNames["arenaCoordinates"])
+        self.bridgeCoordinates = np.genfromtxt(self.fileNames["bridgeCoordinates"],delimiter=",")
+    
     
     def segmentTrialsFromLog(self):
         """

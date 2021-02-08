@@ -216,9 +216,14 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500)
     mouseLeverD = mouseLeverDetector(pathConfigFile=configFile)
     mouseLeverD.inferenceVideo(pathVideoFile=croppedVideoFile,overwrite=True)
 
+    # save position data to file
+    mouseLeverD.savePositionOrientationToFile(pathVideoFile=croppedVideoFile, 
+                                              fileName = ses.fileNames["mouseLeverPosition.csv"])
+        
     now = datetime.now()
     duration = now-start_time
     print("Time elapsed", str(duration))
+    
     
     labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
     mouseLeverD.labelVideoMouseLever(pathVideoFile=croppedVideoFile,pathOutputFile=labeledVideoFile)
