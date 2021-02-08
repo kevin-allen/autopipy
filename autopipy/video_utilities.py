@@ -171,7 +171,7 @@ def drawArena(frame, aCoord):
 
 
 
-def positionTrackingFromArenaTopVideo(ses,modelDir):
+def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500):
     """
     Function to do all the video processing to get the position of the animal on the arena
 
@@ -189,13 +189,13 @@ def positionTrackingFromArenaTopVideo(ses,modelDir):
     arenaImageFile=ses.path+"/arenaDetection.png"
     arenaD = arenaDetector()
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=180, 
-                                  maxRadius=220, numFrames=100, blur=11, circle='min')
+                                  maxRadius=220, numFrames=500, blur=11, circle='min')
     arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
 
     configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
     bridgeImageFile = ses.path+"/bridgeDetection.png"
     bridgeD = bridgeDetector(pathConfigFile=configFile)
-    bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=videoFile,numFrames=100, skip=30)
+    bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=videoFile,numFrames=numFramesBridgeDetection, skip=30)
     bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
 
     now = datetime.now()
