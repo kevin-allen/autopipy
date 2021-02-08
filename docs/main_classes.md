@@ -6,6 +6,7 @@ We will also have classes to perform specific analysis, for example for video de
 
 ## List of classes
 
+* **project**: Representing a research project or experiment containing a list of sessions.
 * **session**: Representing a single session
 * **trial**: Representing a single trial
 * **dlc**: Class to run DeepLabCut inference
@@ -13,4 +14,3 @@ We will also have classes to perform specific analysis, for example for video de
 * **mouseLeverDetector**: Detect the mouse and lever in video, inherits from dlc
 * **bridgeDetector**: Detect the bridge in video, inherits from dlc
 * **arenaDetector**: Detect the arena in video
-
