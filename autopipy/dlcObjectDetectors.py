@@ -689,12 +689,22 @@ class bridgeDetector(dlc):
         for file in fileList:
             os.remove(file)
         
+        
+        # we should check that we have valid values not NAN and that they are within the frame
+        
+        
+        
         # get the mode of leftAnt.x, leftAnt.y, rightAnt.x, rightAnt.y
-        x1 = mode(self.posi[:,0].astype(int))[0]
-        y1 = mode(self.posi[:,1].astype(int))[0]
-        x2 = mode(self.posi[:,2].astype(int))[0]
-        y2 = mode(self.posi[:,3].astype(int))[0]
-       
+        x1 = mode(self.posi[np.logical_not(np.isnan(self.posi[:,0])),0].astype(int))[0]
+        y1 = mode(self.posi[np.logical_not(np.isnan(self.posi[:,1])),1].astype(int))[0]
+        x2 = mode(self.posi[np.logical_not(np.isnan(self.posi[:,2])),2].astype(int))[0]
+        y2 = mode(self.posi[np.logical_not(np.isnan(self.posi[:,3])),3].astype(int))[0]
+        
+        print("Bridge coordinates: {} {} {} {}".format(x1,y1,x2,y2))
+    
+    
+    
+    
         # we extend the bridge to the top edge of the image, this is heading into the home base.
         # top-left, bottom-left, bottom-right, top-right
         self.bridgeCoordinates = np.array([[x1[0],0],

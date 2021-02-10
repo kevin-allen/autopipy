@@ -120,6 +120,7 @@ class dlc():
             return False
         
         # read the data
+        print("dlc.loadPositionData() read data from "+self.pathVideoOutputH5)
         self.out = h5py.File(self.pathVideoOutputH5,mode="r")['df_with_missing']['table'][:]
         
         # turn this into a np.array with one row per frame

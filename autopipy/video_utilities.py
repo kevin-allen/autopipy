@@ -192,7 +192,8 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500)
                                   maxRadius=220, numFrames=500, blur=11, circle='min')
     arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
 
-    configFile = modelDir+"/detectBridgeDLC_640_480/arena_top-Allen-2020-08-20/config.yaml"
+    #configFile = modelDir+"/detectBridgeDLC_640_480/arena_top-Allen-2020-08-20/config.yaml"
+    configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
     bridgeImageFile = ses.path+"/bridgeDetection.png"
     bridgeD = bridgeDetector(pathConfigFile=configFile)
     bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=videoFile,numFrames=numFramesBridgeDetection, skip=30)
@@ -245,7 +246,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500)
     bridgeD = bridgeDetector(pathConfigFile=configFile)
     bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=100, skip=30)
     bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
-    np.savetxt(ses.fileNames["bridgeCoordinates",bCoord,delimiter=","])
+    np.savetxt(ses.fileNames["bridgeCoordinates"],bCoord,delimiter=",")
     
     outputImageFile=ses.path+"/arenaBridgeDetectionCropped.png"
     arenaBridgeDetectionImage(pathVideoFile=croppedVideoFile,
