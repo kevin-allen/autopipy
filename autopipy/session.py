@@ -2,7 +2,7 @@ import os.path
 import os
 import pandas as pd
 import numpy as np
-from autopipy.trial import trial
+import autopipy.trial
 class session:
     """
     Class containing information about an autopi session
@@ -45,12 +45,13 @@ class session:
             self.requiredFileExts.append("home_base.log")
             
         # check that we have valid data
+        self.dirOk=False
         if dataFileCheck:
             if self.checkSessionDirectory():
                 self.dirOk=True
             else:
                 print("problem with the directory " + self.path)
-                self.dirOk=False
+
     
         # check if we have an arena_top.cropped.avi file
         self.arenaTopCropped=False

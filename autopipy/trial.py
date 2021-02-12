@@ -189,14 +189,17 @@ class trial:
         # get the one-hot encoding back into categorical, when several true, the first column is return.
         self.stateDF["loca"] = self.stateDF.iloc[:, :].idxmax(1)
                     
-        ##########################
-        ## identify search paths #
-        ##########################
+        ####################
+        ## identify  paths #
+        ####################
         if len(self.leverPress) > 0 : # nothing if this makes sense if there is no lever press
             
+            ###################
+            ## search paths ###
+            ###################
             ## searchTotal, from first step on the arena to lever pressing, excluding bridge time
-            searchTotalStartIndex = self.stateDF.loca.index[self.stateDF.loca=="arena"]
-            searchTotalEndIndex = self.leverPress.videoIndex.iloc[0]        
+            self.searchTotalStartIndex = self.stateDF.loca.index[self.stateDF.loca=="arena"][0]
+            self.searchTotalEndIndex = self.leverPress.videoIndex.iloc[0]        
             ## searchLast, from first step on the arena after the last bridge to lever pressing
             bridgeIndex = self.stateDF[self.stateDF.loca=="bridge"].index
             if len(bridgeIndex[(bridgeIndex.values < self.leverPress.videoIndex.iloc[0])])==0:
@@ -205,22 +208,34 @@ class trial:
                 lastBridgeIndexBeforePress=self.startVideoIndex
             else :
                 lastBridgeIndexBeforePress = (bridgeIndex[(bridgeIndex.values < self.leverPress.videoIndex.iloc[0])])[-1]
-            searchLastStartIndex = lastBridgeIndexBeforePress
-            searchLastEndIndex = self.leverPress.videoIndex.iloc[0]
+            self.searchLastStartIndex = lastBridgeIndexBeforePress
+            self.searchLastEndIndex = self.leverPress.videoIndex.iloc[0]
             ## searchLastNoLever, seachLast, excluding time at lever before pressing
             leverIndex = self.stateDF[self.stateDF.loca=="lever"].index
-            searchLastNoLeverStartIndex = searchLastStartIndex
-            searchLastNoLeverEndIndex = (leverIndex[(leverIndex.values >lastBridgeIndexBeforePress) &
+            self.searchLastNoLeverStartIndex = self.searchLastStartIndex
+            self.searchLastNoLeverEndIndex = (leverIndex[(leverIndex.values >lastBridgeIndexBeforePress) &
                (leverIndex.values < self.leverPress.videoIndex.iloc[0])])[0]
         
-        
-        ## homingTotal, from first lever press to first bridge
-        ## homingPeri, from first lever press to periphery
-        ## homingPeriNoLever, from first lever press to periphery, excluding first lever time period
-        ## lever path before first press
-        ## lever path after first press
-        
-        
+            ##################
+            ## homing paths ##
+            ##################
+            ## homingTotal, from first lever press to first bridge after the press
+            self.homingTotalStartIndex = self.leverPress.videoIndex.iloc[0]
+            if len(bridgeIndex[(bridgeIndex.values > self.leverPress.videoIndex.iloc[0])])==0:
+                print("no bridge after lever press in trial {}".format(self.trialNo))
+                print("This situation could be caused by video synchronization problems")
+                firstBridgeIndexAfterPress=self.endVideoIndex
+            else :
+                firstBridgeIndexAfterPress = (bridgeIndex[(bridgeIndex.values > self.leverPress.videoIndex.iloc[0])])[0]
+            self.homingTotalEndIndex = firstBridgeIndexAfterPress
+            ## homingPeri, from first lever press to periphery
+            self.homingPeriStartIndex = self.homingTotalStartIndex
+            self.homingPeriEndIndex = self.peripheryAfterFirstLeverPressVideoIndex
+            ## homingPeriNoLever, from first lever press to periphery, excluding first lever time period
+            notAtLeverIndex = self.stateDF[self.stateDF.lever==0].index
+            self.homingPeriNoLeverStartIndex = (notAtLeverIndex[notAtLeverIndex.values > self.leverPress.videoIndex.iloc[0]])[0]
+            self.homingPeriNoLeverEndIndex = self.peripheryAfterFirstLeverPressVideoIndex
+   
 
     def videoIndexFromTimeStamp(self, timeStamp):
         """
@@ -243,23 +258,53 @@ class trial:
         inHeight = int (cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         nFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
   
-        self.mask = np.full((inWidth, inHeight), 255, dtype=np.uint8) # to plot the path
-        self.maskSearchTotal = np.full((inWidth, inHeight), 0, dtype=np.uint8)
-        self.maskSearchLast = np.full((inWidth, inHeight), 0, dtype=np.uint8) 
-        self.maskSearchLastNoLever = np.full((inWidth, inHeight), 0, dtype=np.uint8) 
-    
-    
-        out = cv2.VideoWriter(pathVideoFileOut, cv2.VideoWriter_fourcc(*'MJPG'), fps, (inWidth,inHeight))
+        ## mask to plot paths
+        mask = np.full((inWidth, inHeight), 255, dtype=np.uint8) # to plot the path
+        maskSearchTotal = np.full((inWidth, inHeight), 0, dtype=np.uint8)
+        maskSearchLast = np.full((inWidth, inHeight), 0, dtype=np.uint8) 
+        maskSearchLastNoLever = np.full((inWidth, inHeight), 0, dtype=np.uint8)
+        maskHomingTotal = np.full((inWidth, inHeight), 0, dtype=np.uint8)
+        maskHomingPeri = np.full((inWidth, inHeight), 0, dtype=np.uint8)
+        maskHomingPeriNoLever = np.full((inWidth, inHeight), 0, dtype=np.uint8)
         
+        # We will combine to their respective mask, then we will add them to get the right color mixture
+        searchTotalBG = np.full((inWidth,inHeight,3),0,dtype=np.uint8)
+        searchLastBG =  np.full((inWidth,inHeight,3),0,dtype=np.uint8)
+        searchLastNoLeverBG =  np.full((inWidth,inHeight,3),0,dtype=np.uint8)
+        searchTotalBG[:,:,0] = 150 # these values for search paths should not go over 255 on one channel
+        searchLastBG[:,:,0] = 105
+        searchLastNoLeverBG[:,:,1] = 150
+        
+        homingTotalBG = np.full((inWidth,inHeight,3),0,dtype=np.uint8)
+        homingPeriBG = np.full((inWidth,inHeight,3),0,dtype=np.uint8)
+        homingPeriNoLeverBG = np.full((inWidth,inHeight,3),0,dtype=np.uint8)
+        homingTotalBG[:,:,2] = 150
+        homingPeriBG[:,:,2] = 105
+        homingPeriNoLeverBG[:,:,1] = 150
+        
+        maskDict = {"mask" : mask,
+                    "maskSearchTotal" : maskSearchTotal,
+                    "maskSearchLast" : maskSearchLast,
+                    "maskSearchLastNoLever": maskSearchLastNoLever,
+                    "maskHomingTotal": maskHomingTotal,
+                    "maskHomingPeri": maskHomingPeri,
+                    "maskHomingPeriNoLever" :maskHomingPeriNoLever,
+                    "searchTotalBG" : searchTotalBG,
+                    "searchLastBG" : searchLastBG,
+                    "searchLastNoLeverBG" : searchLastNoLeverBG,
+                    "homingTotalBG": homingTotalBG,
+                    "homingPeriBG" : homingPeriBG,
+                    "homingPeriNoLeverBG" : homingPeriNoLeverBG}
+        
+        out = cv2.VideoWriter(pathVideoFileOut, cv2.VideoWriter_fourcc(*'MJPG'), fps, (inWidth,inHeight))
         cap.set(cv2.CAP_PROP_POS_FRAMES, self.startVideoIndex)
         
-        print("video:{}".format(pathVideoFileOut))
         print("Trial {}, from {} to {}, {} frames".format(self.trialNo,self.startVideoIndex,self.endVideoIndex, self.endVideoIndex-self.startVideoIndex))
         count = 0
         for i in range(self.startVideoIndex,self.endVideoIndex+1):
             ret, frame = cap.read()
         
-            frame = self.decorateVideoFrame(frame,i,count)
+            frame = self.decorateVideoFrame(frame,i,count,maskDict)
             
             out.write(frame)
             count=count+1
@@ -268,7 +313,7 @@ class trial:
         cap.release() 
     
     
-    def decorateVideoFrame(self,frame,index,count):
+    def decorateVideoFrame(self,frame,index,count,maskDict):
         
         # trial time
         frame = cv2.putText(frame, 
@@ -336,18 +381,67 @@ class trial:
                             0.5, (100,200,0), 1, cv2.LINE_AA)
             
             
-            
-    
+        ###################################
+        ### mask operations for the path ##
+        ###################################
         # draw the path using a mask
         if not np.isnan(self.trialML.loc[index,"mouseX"]) :
-            self.mask = cv2.circle(self.mask,
+            maskDict["mask"] = cv2.circle(maskDict["mask"],
                                   (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
                                    radius=1, color=(0, 0, 0), thickness=1)
+            
+            # draw the search path into the specific mask
+            if index >= self.searchTotalStartIndex and index <= self.searchTotalEndIndex:
+                maskDict["maskSearchTotal"] = cv2.circle(maskDict["maskSearchTotal"],
+                                          (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                           radius=1, color=(255, 255, 255), thickness=1)
+            if index >= self.searchLastStartIndex and index <= self.searchLastEndIndex:
+                maskDict["maskSearchLast"] = cv2.circle(maskDict["maskSearchLast"],
+                                          (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                           radius=1, color=(255, 255, 255), thickness=1)
+            if index >= self.searchLastNoLeverStartIndex and index <= self.searchLastNoLeverEndIndex:
+                maskDict["maskSearchLastNoLever"] = cv2.circle(maskDict["maskSearchLastNoLever"],
+                                          (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                           radius=1, color=(255, 255, 255), thickness=1)
         
-         # apply the path mask to the frame
-        frame = cv2.bitwise_or(frame, frame, mask=self.mask)
+            if index >= self.homingTotalStartIndex and index <= self.homingTotalEndIndex:
+                maskDict["maskHomingTotal"] = cv2.circle(maskDict["maskHomingTotal"],
+                                          (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                           radius=1, color=(255, 255, 255), thickness=1)
+            if index >= self.homingPeriStartIndex and index <= self.homingPeriEndIndex:
+                maskDict["maskHomingPeri"] = cv2.circle(maskDict["maskHomingPeri"],
+                                          (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                           radius=1, color=(255, 255, 255), thickness=1)
+            if index >= self.homingPeriNoLeverStartIndex and index <= self.homingPeriNoLeverEndIndex:
+                maskDict["maskHomingPeriNoLever"] = cv2.circle(maskDict["maskHomingPeriNoLever"],
+                                          (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                           radius=1, color=(255, 255, 255), thickness=1)
+            
         
-        # add mouse position and orientation
+        # these create an image with just the specific path in a specific color
+        
+        searchLastPath = cv2.bitwise_or(maskDict["searchLastBG"],maskDict["searchLastBG"],mask=maskDict["maskSearchLast"])
+            
+        searchTotalPath = cv2.bitwise_or(maskDict["searchTotalBG"],maskDict["searchTotalBG"],mask=maskDict["maskSearchTotal"])
+      
+        searchLastNoLever = cv2.bitwise_or(maskDict["searchLastNoLeverBG"],maskDict["searchLastNoLeverBG"],mask=maskDict["maskSearchLastNoLever"])
+        homingTotalPath = cv2.bitwise_or(maskDict["homingTotalBG"],maskDict["homingTotalBG"],mask=maskDict["maskHomingTotal"])
+        homingPeriPath = cv2.bitwise_or(maskDict["homingPeriBG"],maskDict["homingPeriBG"],mask=maskDict["maskHomingPeri"])
+        homingPeriNoLeverPath = cv2.bitwise_or(maskDict["homingPeriNoLeverBG"],maskDict["homingPeriNoLeverBG"],mask=maskDict["maskHomingPeriNoLever"])
+        
+        # apply the path mask to the main frame to zero the pixels in the path
+        frame = cv2.bitwise_or(frame, frame, mask=maskDict["mask"])
+        
+        # combine the different colors to get the search paths
+        frame = frame + searchTotalPath + searchLastPath + searchLastNoLever
+        # combine the different colors to get the homing paths
+        frame = frame + homingTotalPath + homingPeriPath + homingPeriNoLeverPath
+        
+      
+        
+        ####################################### 
+        # add mouse position and orientation ##
+        #######################################
         # mouse orientaiton (head-direction) line
         if ~np.isnan(self.trialML.loc[index,"mouseX"]):
             frame = cv2.line(frame,
@@ -367,8 +461,9 @@ class trial:
                             (100,255,255),2)
         
         
-        
-        # add lever position and orientation
+        #######################################
+        # add lever position and orientation ##
+        #######################################
         # lever orientaiton line
         if ~np.isnan(self.trialML.loc[index,"leverX"]) :
             frame = cv2.line(frame,
@@ -393,10 +488,6 @@ class trial:
                                  int(self.trialML.loc[index,"leverY"])),
                                 radius=4, color=(0, 255, 0), thickness=3)
         
-         
-    
-        
-        
         
         ## Draw a point where the animal reaches periphery after first lever press
         if index > self.peripheryAfterFirstLeverPressVideoIndex :
@@ -405,19 +496,7 @@ class trial:
                                (int(self.peripheryAfterFirstLeverPressCoord[0]),
                                 int(self.peripheryAfterFirstLeverPressCoord[1])),
                                     radius=4, color=(255, 100, 0), thickness=4)
-            
-#             frame = cv2.line(frame,
-#                              (int(self.peripheryAfterFirstLeverPressCoord[0]),
-#                                 int(self.peripheryAfterFirstLeverPressCoord[1])),
-#                              (int(self.aCoord[0]),int(self.aCoord[1])),
-#                             (255,100,0),2)
-#             frame = cv2.line(frame,
-#                              (int(self.bCoordMiddle[0]),int(self.bCoordMiddle[1])),
-#                              (int(self.aCoord[0]),int(self.aCoord[1])),
-#                             (255,100,0),2)
-        
-        
-            
+         
         ## Draw the bridge
         for i in range(3):
             frame = cv2.line(frame,
@@ -428,8 +507,6 @@ class trial:
                         (int(self.bCoord[3,0]),int(self.bCoord[3,1])),
                         (int(self.bCoord[0,0]),int(self.bCoord[0,1])),
                             (200,200,200),1)
-        
-        
         
         ## Draw the periphery
         frame = cv2.circle(frame,
@@ -442,7 +519,7 @@ class trial:
                                (int(self.trialML.loc[index,"leverX"]),int(self.trialML.loc[index,"leverY"])),
                                radius=int(self.radiusLeverProximity), color=(50, 50, 50), thickness=1)
         
-        
+        self.frame = frame
        
         
         return frame
