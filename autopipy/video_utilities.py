@@ -192,8 +192,8 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500)
                                   maxRadius=220, numFrames=500, blur=11, circle='min')
     arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
 
-    #configFile = modelDir+"/detectBridgeDLC_640_480/arena_top-Allen-2020-08-20/config.yaml"
-    configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
+    configFile = modelDir+"/detectBridgeDLC_640_480/arena_top-Allen-2020-08-20/config.yaml"
+    #configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
     bridgeImageFile = ses.path+"/bridgeDetection.png"
     bridgeD = bridgeDetector(pathConfigFile=configFile)
     bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=videoFile,numFrames=numFramesBridgeDetection, skip=30)

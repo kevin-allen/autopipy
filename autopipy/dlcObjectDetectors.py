@@ -245,11 +245,11 @@ class mouseLeverDetector(dlc):
         
         # create a DataFrame
         posiOri = pd.DataFrame(self.posiOri,
-             columns=["leverX", "leverY", "leverOri", "leverXHeading", "leverYHeading","mouseX", "mouseY", "mouseOri", "mouseXHeading", "mouseYHeading", ])
+             columns=["leverX", "leverY", "leverOri", "leverXHeading", "leverYHeading",
+                      "leverPressX", "leverPressY", 
+                      "mouseX", "mouseY", "mouseOri", "mouseXHeading", "mouseYHeading"])
         # save to file
         posiOri.to_csv(fileName,index=False)
-
-        
         
     
     def positionOientationFromFile(self,pathVideoFile):
@@ -290,14 +290,15 @@ class mouseLeverDetector(dlc):
         Return
             List containing 
                 lever.x, lever.y , lever.theta_deg, lever.X, lever.Y
+                leverPress.x, leverPress.y,
                 mouse.x, mouse.y , mouse.theta_deg, mouse.X, mouse.Y
                 
-                x and y are the middle point of the lever box for lever
+                lever.x and lever.y are the middle point of the lever box for lever
                 theta_deg is the angle of the lever or animal relative to East. North is 90 degrees
                 
-                X and Y are the vector from the x and y heading in the calculated orientation
+                lever.X and lever.Y are the vector from the x and y heading in the calculated orientation
         """
-        ret = np.empty(10) # to return the results
+        ret = np.empty(12) # to return the results
         ret[:] = np.nan # by default set to NaN
                
         # LEVER
@@ -327,7 +328,7 @@ class mouseLeverDetector(dlc):
                 theta = 2*np.pi-theta
             theta_deg = theta/(2*np.pi)*360
 
-            ret[0:5] = [x,y,theta_deg,X,Y]
+            ret[0:7] = [x,y,theta_deg,X,Y,frameTrackingData[inds+0],frameTrackingData[inds+1]]
         
         # MOUSE
         # if we know where the mouse is, values for mouse starts at 
@@ -356,7 +357,7 @@ class mouseLeverDetector(dlc):
                 theta = 2*np.pi-theta
             theta_deg = theta/(2*np.pi)*360
 
-            ret[5:10] = [x,y,theta_deg,X,Y]
+            ret[7:12] = [x,y,theta_deg,X,Y]
         
         return ret
         
@@ -454,7 +455,7 @@ class mouseLeverDetector(dlc):
                                              0.75, (100,200,0), 1, cv2.LINE_AA) 
         else:
             # mouse direction
-            inds=5
+            inds=7
             # mouse orientaiton line
             frame = cv2.line(frame,(int(onePosiOri[inds+0]),int(onePosiOri[inds+1])),(int(onePosiOri[inds+0]+onePosiOri[inds+3]*3),int(onePosiOri[inds+1]+onePosiOri[inds+4]*3)),(0,200,255),2) 
             # mouse position dot
@@ -700,19 +701,21 @@ class bridgeDetector(dlc):
         x2 = mode(self.posi[np.logical_not(np.isnan(self.posi[:,2])),2].astype(int))[0]
         y2 = mode(self.posi[np.logical_not(np.isnan(self.posi[:,3])),3].astype(int))[0]
         
-        print("Bridge coordinates: {} {} {} {}".format(x1,y1,x2,y2))
+       
     
     
     
     
         # we extend the bridge to the top edge of the image, this is heading into the home base.
         # top-left, bottom-left, bottom-right, top-right
-        self.bridgeCoordinates = np.array([[x1[0],0],
-                         [x1[0],y1[0]],
-                         [x2[0],y2[0]],
-                         [x2[0],0]])
-       
+        # use the max y so that it has a rectangular shape
         
+        self.bridgeCoordinates = np.array([[x1[0],0],
+                                           [x1[0],np.maximum(y1,y2)[0]],
+                                           [x2[0],np.maximum(y1,y2)[0]],
+                                           [x2[0],0]])
+       
+        print("Bridge coordinates: {}".format(self.bridgeCoordinates))
         return self.bridgeCoordinates
 
 

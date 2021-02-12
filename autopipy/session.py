@@ -1,4 +1,5 @@
 import os.path
+import os
 import pandas as pd
 import numpy as np
 from autopipy.trial import trial
@@ -23,7 +24,9 @@ class session:
         loadLogFile()
         loadPositionTrackingData()
         segmentTrialsFromLog()
+        extractTrialFeatures()
         createTrialList()
+        createTrialVideos()
     """
     def __init__(self,name,path,arenaTopVideo=True,homeBaseVideo=True, dataFileCheck=True):
         self.name = name
@@ -176,7 +179,39 @@ class session:
         def getTrialFromSeries(x):
             return trial(x.sessionName,x.trialNo,x.startTime,x.endTime,x.startTimeWS,x.endTimeWS)
         self.trialList = self.trials.apply(getTrialFromSeries,axis=1).tolist()
+    
+    def extractTrialFeatures(self):
+        """
+        Does most of the job of extracting information of the trials in our trialList
+        """
+        self.segmentTrialsFromLog() # get the beginning and end of trials
+        self.createTrialList() # create a List of trial object
+        self.loadLogFile()
+        self.loadPositionTrackingData()
+        for trial in self.trialList:
+            trial.extractTrialFeatures(log = self.log,
+                                       mLPosi = self.mouseLeverPosi,
+                                       videoLog = self.videoLog,
+                                       aCoord = self.arenaCoordinates,
+                                       bCoord = self.bridgeCoordinates)   
+    def createTrialVideos(self):
+        """
+        Create trial videos in a trialVideos directory
+        """
+        trialVideosDir = self.path+"/trialVideos"
+        print("Saving videos in "+trialVideosDir)
+        if not os.path.exists(trialVideosDir) :
+            try:
+                os.mkdir(trialVideosDir)
+            except OSError:
+                print ("Creation of the directory %s failed" % trialVideosDir)
+                return
+            else:
+                print ("Successfully created the directory %s " % trialVideosDir)
         
+        for trial in self.trialList:
+            trial.createTrialVideo(pathVideoFile = self.fileNames["arena_top.cropped.avi"],
+                                   pathVideoFileOut = "{}/{}.trial_{}.avi".format(trialVideosDir,self.name,trial.trialNo))
         
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
