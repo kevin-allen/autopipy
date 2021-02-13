@@ -233,7 +233,7 @@ class mouseLeverDetector(dlc):
         """
         1) Read the output of the inference
         2) get position and orientation of mouse and lever
-        3) save the data in a csv file
+        3) save the data in a csv file that can be read easily
         """
         if not os.path.isfile(pathVideoFile): 
             print(pathVideoFile + " does not exist")
@@ -430,7 +430,6 @@ class mouseLeverDetector(dlc):
             oneOut numpy array with the tracking data of one frame
             onePosiOri numpy array with the position of the lever center, the lever orientation, and vector from center to lever press
         """
-        
         ## open cv drawings
         if np.isnan(onePosiOri[0]):
             frame = cv2.putText(frame, "No lever detected", (50,50), cv2.FONT_HERSHEY_SIMPLEX ,  
@@ -450,7 +449,7 @@ class mouseLeverDetector(dlc):
             frame = cv2.putText(frame, "{:.1f} {:.1f}".format(onePosiOri[inds+0],onePosiOri[inds+1]), (50,100), cv2.FONT_HERSHEY_SIMPLEX ,  
                                                  0.75, (100,200,0), 1, cv2.LINE_AA)
            
-        if np.isnan(onePosiOri[5]):  
+        if np.isnan(onePosiOri[7]):  
             frame = cv2.putText(frame, "No mouse detected", (50,150), cv2.FONT_HERSHEY_SIMPLEX ,  
                                              0.75, (100,200,0), 1, cv2.LINE_AA) 
         else:

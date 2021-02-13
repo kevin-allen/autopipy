@@ -171,7 +171,13 @@ def drawArena(frame, aCoord):
 
 
 
-def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500):
+def positionTrackingFromArenaTopVideo(ses,modelDir,
+                                      bridge640_480Model = "bridgeDetection_640_480-Allen-2021-02-10",
+                                      mouseLeverModel = "arena_top-Allen-2019-10-30",
+                                      bridge480_480Model = "bridgeDetection_480_480-Allen-2021-01-23",
+                                      arenaMinRadius= 190,
+                                      arenaMaxRadius= 230,
+                                      numFramesBridgeDetection=500):
     """
     Function to do all the video processing to get the position of the animal on the arena
 
@@ -188,11 +194,14 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500)
     videoFile = ses.fileNames["arena_top.avi"] #Nice trick to get file names using a dict
     arenaImageFile=ses.path+"/arenaDetection.png"
     arenaD = arenaDetector()
-    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=180, 
-                                  maxRadius=220, numFrames=500, blur=11, circle='min')
+    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=arenaMinRadius, 
+                                  maxRadius=arenaMaxRadius, numFrames=500, blur=11, circle='min')
     arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
 
-    configFile = modelDir+"/detectBridgeDLC_640_480/arena_top-Allen-2020-08-20/config.yaml"
+    configFile = modelDir+"/"+ bridge640_480Model+"/config.yaml"
+    if not os.path.isfile(configFile):
+        print(configFile+ " is missing")
+        return
     #configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
     bridgeImageFile = ses.path+"/bridgeDetection.png"
     bridgeD = bridgeDetector(pathConfigFile=configFile)
@@ -212,7 +221,11 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500)
     duration = now-start_time
     print("Time elapsed", str(duration))
     
-    configFile=modelDir+"/arena_top-Allen-2019-10-30/config.yaml"
+    configFile=modelDir+"/"+ mouseLeverModel + "/config.yaml"
+    if not os.path.isfile(configFile):
+        print(configFile+ " is missing")
+        return
+    
     croppedVideoFile = os.path.splitext(videoFile)[0]+".cropped.avi"
     mouseLeverD = mouseLeverDetector(pathConfigFile=configFile)
     mouseLeverD.inferenceVideo(pathVideoFile=croppedVideoFile,overwrite=True)
@@ -241,7 +254,11 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,numFramesBridgeDetection=500)
     arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
     np.savetxt(ses.fileNames["arenaCoordinates"],aCoord,delimiter=",") 
 
-    configFile = modelDir+"/bridgeDetection_480_480-Allen-2021-01-23/config.yaml"
+    configFile = modelDir + "/" + bridge480_480Model + "/config.yaml"
+    if not os.path.isfile(configFile):
+        print(configFile+ " is missing")
+        return
+    
     bridgeImageFile = ses.path+"/bridgeDetectionCropped.png"
     bridgeD = bridgeDetector(pathConfigFile=configFile)
     bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=100, skip=30)
