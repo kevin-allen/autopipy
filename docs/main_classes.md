@@ -6,11 +6,12 @@ We will also have classes to perform specific analysis, for example for video de
 
 ## List of classes
 
-* **project**: Representing a research project or experiment containing a list of sessions.
-* **session**: Representing a single session. This class can check that we have all the needed files for analysis. It also get trial times from the log file.
-* **trial**: Representing a single trial. This takes care of extracting the trial features and make trial related stuff (videos).
-* **dlc**: Class to run DeepLabCut inference
-* **leverDetector**: Detect the lever in video, inherits from dlc
-* **mouseLeverDetector**: Detect the mouse and lever in video, inherits from dlc
-* **bridgeDetector**: Detect the bridge in video, inherits from dlc
-* **arenaDetector**: Detect the arena in video
+* **project**: Represents a research project or experiment containing a list of sessions.
+* **session**: Represents a single session. This class can check that we have all the needed files for analysis. It also get trial times from the log file.
+* **trial**: Represents a single trial. This takes care of extracting the trial features and make trial related stuff (videos).
+* **navPath**: Represents a path of an animal. This will extract different variables from it (e.g. distance, directional vector length).
+* **dlc**: Class to run DeepLabCut inference.
+* **leverDetector**: Detects the lever in video, inherits from dlc.
+* **mouseLeverDetector**: Detects the mouse and lever in video, inherits from dlc.
+* **bridgeDetector**: Detects the bridge in video, inherits from dlc.
+* **arenaDetector**: Detects the arena in video.
