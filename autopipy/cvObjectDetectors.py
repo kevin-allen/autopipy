@@ -18,7 +18,7 @@ class arenaDetector:
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
-    def detectArenaCoordinates (self, pathVideoFile, minRadius=180, maxRadius=220, numFrames=100, blur=11, circle='min'):
+    def detectArenaCoordinates (self, pathVideoFile, minRadius=180, maxRadius=220, numFrames=100, blur=11, circleMethod='min'):
     
         if not os.path.isfile(pathVideoFile): 
             print(pathVideoFile + " does not exist")
@@ -68,10 +68,10 @@ class arenaDetector:
         if l.shape[0]==0 :
             print("problem with circle detection, array size 0")
     
-        if circle == 'min':
+        if circleMethod == 'min':
             ## selected the smallest detected circle
             self.coordinates=l[np.argmin(l[:,2]),:]   # coordinates = [x, y, r]
-        elif circle == 'median':
+        elif circleMethod == 'median':
             self.coordinates=l[np.argmin(np.abs(l[:,2] - np.median(l[:,2]))),:]   # coordinates = [x, y, r]
 
         return self.coordinates

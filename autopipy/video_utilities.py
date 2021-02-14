@@ -177,6 +177,8 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
                                       bridge480_480Model = "bridgeDetection_480_480-Allen-2021-01-23",
                                       arenaMinRadius= 190,
                                       arenaMaxRadius= 230,
+                                      arenaCircleMethod = "min",
+                                      numFramesArenaDetection=500,
                                       numFramesBridgeDetection=500):
     """
     Function to do all the video processing to get the position of the animal on the arena
@@ -195,7 +197,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     arenaImageFile=ses.path+"/arenaDetection.png"
     arenaD = arenaDetector()
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=arenaMinRadius, 
-                                  maxRadius=arenaMaxRadius, numFrames=500, blur=11, circle='min')
+                                  maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circle=arenaCircleMethod)
     arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
 
     configFile = modelDir+"/"+ bridge640_480Model+"/config.yaml"
@@ -249,8 +251,8 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     
     arenaImageFile=ses.path+"/arenaDetectionCropped.png"
     arenaD = arenaDetector()
-    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=180, 
-                                  maxRadius=220, numFrames=100, blur=11, circle='min')
+    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=arenaMinRadius, 
+                                  maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circle=arenaCircleMethod)
     arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
     np.savetxt(ses.fileNames["arenaCoordinates"],aCoord,delimiter=",") 
 
@@ -261,7 +263,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     
     bridgeImageFile = ses.path+"/bridgeDetectionCropped.png"
     bridgeD = bridgeDetector(pathConfigFile=configFile)
-    bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=100, skip=30)
+    bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=numFramesBridgeDetection, skip=30)
     bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
     np.savetxt(ses.fileNames["bridgeCoordinates"],bCoord,delimiter=",")
     
