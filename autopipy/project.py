@@ -21,6 +21,7 @@ class Project:
         self.name = name
         self.dataPath = dataPath
         self.dlcModelPath = dlcModelPath
+        self.sessionList = None
         
         print("Project name: "+ self.name)
         print("dataPath: "+ self.dataPath)
