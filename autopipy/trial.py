@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 import sys
 
-class trial:
+class Trial:
     """
     Class containing information about an autopi trial
     

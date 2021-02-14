@@ -2,7 +2,7 @@ import os.path
 import numpy as np
 import cv2
 
-class arenaDetector:
+class ArenaDetector:
     """
     Class to detect the arena from a video
     

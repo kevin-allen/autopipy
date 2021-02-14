@@ -7,7 +7,7 @@ import pandas as pd
 import os 
 
 
-class dlc():
+class Dlc():
     """
     Class to simplify inference with a deeplabcut model. This is just a simple wrapper.
     The aims were to

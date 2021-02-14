@@ -4,7 +4,7 @@ This file contains the object detectors that are based on dlc models
 These classes inherits from the dlc class, so they can easily do inference, label video, etc.
 """
 
-from autopipy.dlc import dlc
+from autopipy.dlc import Dlc
 import os.path
 import numpy as np
 from scipy.stats import mode  
@@ -13,7 +13,7 @@ import cv2
 import glob
 import sys
 
-class leverDetector(dlc):
+class LeverDetector(Dlc):
     """
     Class to implement the detection of the lever using a deeplabcut model
     This class inherits from dlc, but has additional functions that are specific to the lever.
@@ -202,7 +202,7 @@ class leverDetector(dlc):
     
 
 
-class mouseLeverDetector(dlc):
+class MouseLeverDetector(Dlc):
     """
     Class to implement the detection of the mouse and lever using a deeplabcut model
     This class inherits from dlc, but has additional functions that are specific to the lever.
@@ -468,7 +468,7 @@ class mouseLeverDetector(dlc):
             
 
 
-class bridgeDetector(dlc):
+class BridgeDetector(Dlc):
     """
     Class to implement the detection of the bridge using a deeplabcut model
     This class inherits from dlc, but has additional functions that are specific to the bridge.

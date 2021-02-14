@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import autopipy.trial
-class session:
+class Session:
     """
     Class containing information about an autopi session
     
@@ -178,7 +178,7 @@ class session:
         
         """
         def getTrialFromSeries(x):
-            return trial(x.sessionName,x.trialNo,x.startTime,x.endTime,x.startTimeWS,x.endTimeWS)
+            return Trial(x.sessionName,x.trialNo,x.startTime,x.endTime,x.startTimeWS,x.endTimeWS)
         self.trialList = self.trials.apply(getTrialFromSeries,axis=1).tolist()
     
     def extractTrialFeatures(self):

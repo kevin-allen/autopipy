@@ -1,8 +1,8 @@
 import os.path
 import pandas as pd
-from autopipy.session import session
+from autopipy.session import Session
 
-class project:
+class Project:
     """
     Class containing information about an autopi project.
     A project normally contains several sessions and has a tree directory and a model directory
@@ -57,6 +57,6 @@ class project:
             raise TypeError("sessionNameList is not a list")
         
         if needVideos:
-            self.sessionList =  [ session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False) for sessionName in sessionNameList]
+            self.sessionList =  [ Session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False) for sessionName in sessionNameList]
         else :
-            self.sessionList =  [ session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False, arenaTopVideo=False,homeBaseVideo=False) for sessionName in sessionNameList]
+            self.sessionList =  [ Session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False, arenaTopVideo=False,homeBaseVideo=False) for sessionName in sessionNameList]
