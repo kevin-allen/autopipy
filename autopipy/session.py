@@ -24,7 +24,7 @@ class Session:
         loadLogFile()
         loadPositionTrackingData()
         segmentTrialsFromLog()
-        extractTrialFeatures()
+        extractTrialFeatures(): Use this function to extract the trial features
         createTrialList()
         createTrialVideos()
     """
@@ -34,7 +34,7 @@ class Session:
         self.fileBase = path+"/"+name
         self.arenaTopVideo = arenaTopVideo
         self.homeBaseVideo = homeBaseVideo
-        
+    
         self.requiredFileExts = ["log","protocol"]
         if self.arenaTopVideo:
             self.requiredFileExts.append("arena_top.avi")
@@ -58,7 +58,7 @@ class Session:
         if self.arenaTopVideo:
             if os.path.isfile(self.fileBase + "." + "arena_top.cropped.avi"):
                 self.arenaTopCropped=True  
-        
+    
         #####################################################
         # create a dictonary to quickly get the file names ##
         #########################################################
@@ -72,6 +72,17 @@ class Session:
                          "mouseLeverPosition.csv": self.fileBase+".mouseLeverPosition.csv",
                          "arenaCoordinates": self.path+"/"+"arenaCoordinates",
                          "bridgeCoordinates": self.path+"/"+"bridgeCoordinates"} 
+        
+        ################################################################
+        ### other attributes that can be set using different methods  ##
+        ################################################################
+        self.log = None # pandas dataframe, content of the log file
+        self.mouseLeverPosi = None # pandas dataframe, position of mouse and lever
+        self.videoLog = None # pandas dataframe, time point for every video frame that were used to get the mouse and lever position
+        self.arenaCoordinates = None # numpy array containing the arenaCoordinates (x,y,r)
+        self.bridgeCoordinates = None # numpy array containing the 4 corners of the bridge, one corner per row 
+        self.trials = None # pandas dataframe containing trial start and end time 
+        self.trialList = None # list of Trial objects
         return
         
     def checkSessionDirectory(self):
