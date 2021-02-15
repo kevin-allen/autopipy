@@ -27,8 +27,47 @@ class Trial:
         self.startTimeWS = startTimeWS
         self.endTimeWS = endTimeWS
         self.name = "{}_{}".format(sessionName,trialNo)
+        self.duration = None
+        self.trialVideoLog = None # DataFrame
+        self.startVideoIndex = None
+        self.endVideoIndex = None
+        self.aCoord = None # np array (x y r)
+        self.bCoord = None # np array
+        self.bCoordMiddle = None # np array x y
+        self.trialML = None # DataFrame, mouse and lever position data for this trial
+        self.leverPosition = None # Dictionary with the median lever position
+        self.radiusPeriphery = None
+        self.radiusLeverProximity = None
+        self.pathDF = None # DataFrame, instantaneous variable evolving during the trial (e.g., distance run)
+        self.leverPress = None # DataFrame with Ros time and video index of lever presses
+        self.peripheryAfterFirstLeverPressCoord = None
+        self.arenaToBridgeAngle = None
+        self.arenaToMousePeriAngle = None
+        self.stateDF = None # DataFrame with the categorical position of the mouse (Bridge, Arena, ArenaCenter, Lever, Gap)
+        self.nJourneys = None
+        ## start and end indices of paths
+        self.searchTotalStartIndex = None
+        self.searchTotalEndIndex = None
+        self.searchLastStartIndex = None
+        self.searchLastEndIndex = None
+        self.searchLastNoLeverStartIndex = None
+        self.searchLastNoLeverEndIndex = None
+        self.homingTotalStartIndex = None
+        self.homingTotalEndIndex = None
+        self.homingPeriStartIndex = None
+        self.homingPeriEndIndex = None
+        self.homingPeriNoLeverStartIndex = None
+        self.homingPeriNoLeverEndIndex = None
+        self.journeyTransitionIndices = None
+        self.nJourneys = None
+        ## NavPath objects
+        self.searchTotalNavPath = None
+        self.searchLastNavPath = None
+        self.searchLastNoLever = None
+        self.homingTotalNavPath = None
+        self.homingPeriNavPath = None
+        self.homingPeriNoLever = None
         
-    
     def extractTrialFeatures(self,log,mLPosi,videoLog,aCoord,bCoord,
                              arenaRadiusProportionToPeri=0.925,
                              leverProximityRadiusProportion=1.4):
@@ -38,9 +77,9 @@ class Trial:
         Arguments
             log: DataFrame with event log of the session
             mLPosi: DataFrame with mouse and lever position for every video frame
-            videoLog: time for each video frame
-            aCoord: arena coordinates (x, y, radius)
-            bCoord: bridge coordinates (four points)
+            videoLog: DataFrame time for each video frame
+            aCoord: np array arena coordinates (x, y, radius)
+            bCoord: np array bridge coordinates (four points)
             arenaRadiusProportionToPeri: proportion of arena radius at which the periphery of the arena is
             leverProximityRadiusProportion: proportion of the distance between center of lever and leverPress. 
             
@@ -68,6 +107,16 @@ class Trial:
         # get the mouse and lever tracking data for the trial ##
         ########################################################
         self.trialML = mLPosi[(videoLog.time > self.startTime) & (videoLog.time < self.endTime)]     
+        
+        
+        #######################################
+        # location of the lever box and lever #
+        #######################################
+        self.leverPosition = {"leverX" : np.nanmedian(self.trialML["leverX"]),
+                             "leverY" : np.nanmedian(self.trialML["leverY"]),
+                             "leverOri": np.nanmedian(self.trialML["leverOri"]),
+                             "leverPressX" : np.nanmedian(self.trialML["leverPressX"]),
+                             "leverPressY" : np.nanmedian(self.trialML["leverPressY"])}
         
         ################################################
         # define arena periphery and lever proximity  ##
@@ -126,8 +175,8 @@ class Trial:
                                   "speed" : speed,
                                   "speedNoNAN" : speedNoNAN,
                                   "distanceFromArenaCenter" : distanceFromArenaCenter,
-                                   "distanceFromLever" : distanceFromLever,
-                                   "distanceFromLeverPress": distanceFromLeverPress},
+                                  "distanceFromLever" : distanceFromLever,
+                                  "distanceFromLeverPress": distanceFromLeverPress},
                                   index = self.trialML.index)         
        
         ######################
@@ -138,7 +187,7 @@ class Trial:
         leverPressTime = lever.time[index] # ROS time of lever
         leverPressVideoIndex = leverPressTime.apply(self.videoIndexFromTimeStamp) # video index
         self.leverPress = pd.DataFrame({"time": leverPressTime,
-                                         "videoIndex":leverPressVideoIndex})
+                                        "videoIndex":leverPressVideoIndex})
         
         #################################################
         ## reaching periphery after first lever press  ##
@@ -188,12 +237,20 @@ class Trial:
         self.stateDF.insert(0, "gap", self.stateDF.sum(1)==0) 
         # get the one-hot encoding back into categorical, when several true, the first column is return.
         self.stateDF["loca"] = self.stateDF.iloc[:, :].idxmax(1)
+        
+        
+        ######################################################################
+        ## number of journeys on the arena (from the bridge to arena center)##
+        ######################################################################
+        bridgeArenaCenter = self.stateDF[ (self.stateDF.loca=="bridge") | (self.stateDF.loca=="arenaCenter") ]
+        df = pd.DataFrame({"start" : bridgeArenaCenter.shift().loca,"end" : bridgeArenaCenter.loca})
+        self.journeyTransitionIndices = df[(df.start=="bridge") & (df.end=="arenaCenter")].index.values
+        self.nJourneys=len(self.journeyTransitionIndices)
                     
         ####################
         ## identify  paths #
         ####################
-        if len(self.leverPress) > 0 : # nothing if this makes sense if there is no lever press
-            
+        if len(self.leverPress) > 0 : # nothing if this makes sense if there is no lever press   
             ###################
             ## search paths ###
             ###################
@@ -236,7 +293,45 @@ class Trial:
             self.homingPeriNoLeverStartIndex = (notAtLeverIndex[notAtLeverIndex.values > self.leverPress.videoIndex.iloc[0]])[0]
             self.homingPeriNoLeverEndIndex = self.peripheryAfterFirstLeverPressVideoIndex
    
+            #######################################################
+            ## create the NavPath objects to get paths variables ##
+            #######################################################
+            self.searchTotalPose = self.poseFromTrialData(self.searchTotalStartIndex,self.searchTotalEndIndex)
+            self.leverPose = self.poseFromLeverPositionDictionary()
+            self.bridgePose = self.poseFromBridgeCoordinates()
 
+    def poseFromTrialData(self,startIndex,endIndex):
+        """
+        Create a numpy array containing the pose (x, y, z, yaw, pitch, roll, time) during a defined time period
+        Arguments:
+            startIndex: start index of the path, index are from the self.trialML or self.trialVideoLog (they are the same)
+            endIndex: end index of the path
+
+        Return Pose as a numpy array with 7 columns
+
+        """
+        return np.stack((self.trialML.loc[startIndex:endIndex,"mouseX"].to_numpy(),
+                    self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy(),
+                    np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
+                    self.trialML.loc[startIndex:endIndex,"mouseOri"].to_numpy(),
+                    np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
+                    np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
+                    self.trialVideoLog.timeWS.loc[startIndex:endIndex].to_numpy()),axis=1)
+    def poseFromLeverPositionDictionary(self) :
+        """
+        Create a numpy array containing the pose (x, y, z, yaw, pitch, roll, time)  
+        from the leverPosition dictionary.
+        """
+        return np.array([[self.leverPosition["leverX"],self.leverPosition["leverY"],0,
+                          self.leverPosition["leverOri"],0,0,0]])
+
+    def poseFromBridgeCoordinates(self) :
+        """
+        Create a numpy array containing the pose (x, y, z, yaw, pitch, roll, time)  
+        from the middle of the bridge
+        """
+        return np.array([[self.bCoordMiddle[0],self.bCoordMiddle[1],0,0,0,0,0]])
+    
     def videoIndexFromTimeStamp(self, timeStamp):
         """
         Get the frame or index in the video for a given timestamp (event)
@@ -300,6 +395,7 @@ class Trial:
         cap.set(cv2.CAP_PROP_POS_FRAMES, self.startVideoIndex)
         
         print("Trial {}, from {} to {}, {} frames".format(self.trialNo,self.startVideoIndex,self.endVideoIndex, self.endVideoIndex-self.startVideoIndex))
+        print(pathVideoFileOut)
         count = 0
         for i in range(self.startVideoIndex,self.endVideoIndex+1):
             ret, frame = cap.read()
@@ -377,6 +473,12 @@ class Trial:
         frame = cv2.putText(frame, 
                             "Loca: {}".format(self.stateDF.loca[index]), 
                             (frame.shape[1]-200,20), 
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5, (100,200,0), 1, cv2.LINE_AA)
+        # journey (from bridge to arenaCenter)
+        frame = cv2.putText(frame, 
+                            "Journey {} of {}".format(np.sum(index>self.journeyTransitionIndices),self.nJourneys), 
+                            (frame.shape[1]-200,50), 
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (100,200,0), 1, cv2.LINE_AA)
             

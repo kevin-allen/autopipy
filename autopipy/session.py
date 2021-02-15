@@ -2,7 +2,7 @@ import os.path
 import os
 import pandas as pd
 import numpy as np
-import autopipy.trial
+from autopipy.trial import Trial
 class Session:
     """
     Class containing information about an autopi session
