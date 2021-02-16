@@ -3,11 +3,11 @@ import numpy as np
 import cv2
 import sys
 
-from autopipy.session import session
-from autopipy.cvObjectDetectors import arenaDetector
-from autopipy.dlcObjectDetectors import bridgeDetector
-from autopipy.dlcObjectDetectors import mouseLeverDetector
-from autopipy.dlcObjectDetectors import mouseLeverDetector
+from autopipy.session import Session
+from autopipy.cvObjectDetectors import ArenaDetector
+from autopipy.dlcObjectDetectors import BridgeDetector
+from autopipy.dlcObjectDetectors import MouseLeverDetector
+from autopipy.dlcObjectDetectors import MouseLeverDetector
 from datetime import datetime
 
 def maskCropVideoToBridgeArena(pathVideoFile, pathOutputFile, arenaCoordinates, bridgeCoordinates, outWidth=480, outHeight=480, arenaRadiusFactor=1.125, bridgeWidthFactor=1.5):
@@ -195,7 +195,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     
     videoFile = ses.fileNames["arena_top.avi"] #Nice trick to get file names using a dict
     arenaImageFile=ses.path+"/arenaDetection.png"
-    arenaD = arenaDetector()
+    arenaD = ArenaDetector()
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=arenaMinRadius, 
                                   maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circle=arenaCircleMethod)
     arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
@@ -206,7 +206,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
         return
     #configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
     bridgeImageFile = ses.path+"/bridgeDetection.png"
-    bridgeD = bridgeDetector(pathConfigFile=configFile)
+    bridgeD = BridgeDetector(pathConfigFile=configFile)
     bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=videoFile,numFrames=numFramesBridgeDetection, skip=30)
     bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
 
@@ -229,7 +229,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
         return
     
     croppedVideoFile = os.path.splitext(videoFile)[0]+".cropped.avi"
-    mouseLeverD = mouseLeverDetector(pathConfigFile=configFile)
+    mouseLeverD = MouseLeverDetector(pathConfigFile=configFile)
     mouseLeverD.inferenceVideo(pathVideoFile=croppedVideoFile,overwrite=True)
 
     # save position data to file
@@ -250,7 +250,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     
     
     arenaImageFile=ses.path+"/arenaDetectionCropped.png"
-    arenaD = arenaDetector()
+    arenaD = ArenaDetector()
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=arenaMinRadius, 
                                   maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circle=arenaCircleMethod)
     arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
@@ -262,7 +262,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
         return
     
     bridgeImageFile = ses.path+"/bridgeDetectionCropped.png"
-    bridgeD = bridgeDetector(pathConfigFile=configFile)
+    bridgeD = BridgeDetector(pathConfigFile=configFile)
     bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=numFramesBridgeDetection, skip=30)
     bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
     np.savetxt(ses.fileNames["bridgeCoordinates"],bCoord,delimiter=",")

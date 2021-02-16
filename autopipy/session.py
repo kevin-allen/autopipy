@@ -206,6 +206,15 @@ class Session:
                                        videoLog = self.videoLog,
                                        aCoord = self.arenaCoordinates,
                                        bCoord = self.bridgeCoordinates)   
+    def getTrialVariablesDataFrame(self):
+        """
+        Get a DatatFrame with the variables of each trial
+        """
+        dfList = [trial.getTrialVariables() for trial in self.trialList]
+        self.trialVariables = pd.concat(dfList)
+        
+        
+        
     def createTrialVideos(self):
         """
         Create trial videos in a trialVideos directory

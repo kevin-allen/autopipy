@@ -182,14 +182,16 @@ class LeverDetector(Dlc):
         Y=frameTrackingData[1]-y
         v=np.array([X,Y])
         ## make it a unitary vector, get the length
+        ## get the angle of this vector relative to 1,0
+        ## make it a unitary vector, get the length
         l = np.sqrt(np.dot(v,v))
         u = v/l
-        U = np.array([1,0]) # ref vector
-        ## get the angle between ref vector and our unitory vector
-        theta = np.arccos(np.dot(u,U))
-        if u[1]>0:
-            theta = 2*np.pi-theta
+        ## get the angle between 1,0 and our unitory vector
+        theta = np.arctan2(u[1],u[0])
+        if theta<0:
+            theta = 2*np.pi+theta
         theta_deg = theta/(2*np.pi)*360
+
 
         return [x,y,theta_deg,X,Y]
 
@@ -294,7 +296,7 @@ class MouseLeverDetector(Dlc):
                 mouse.x, mouse.y , mouse.theta_deg, mouse.X, mouse.Y
                 
                 lever.x and lever.y are the middle point of the lever box for lever
-                theta_deg is the angle of the lever or animal relative to East. North is 90 degrees
+                theta_deg is the angle of the lever or animal relative to East. When y is positive, it gets toward 90 degrees
                 
                 lever.X and lever.Y are the vector from the x and y heading in the calculated orientation
         """
@@ -318,16 +320,20 @@ class MouseLeverDetector(Dlc):
             X=frameTrackingData[inds+0]-x
             Y=frameTrackingData[inds+1]-y
             v=np.array([X,Y])
+            
+            ## get the angle of this vector relative to 1,0
+            ## make it a unitary vector, get the length
+            ## get the angle of this vector relative to 1,0
             ## make it a unitary vector, get the length
             l = np.sqrt(np.dot(v,v))
             u = v/l
-            U = np.array([1,0]) # ref vector
-            ## get the angle between ref vector and our unitory vector
-            theta = np.arccos(np.dot(u,U))
-            if u[1]>0:
-                theta = 2*np.pi-theta
+            ## get the angle between 1,0 and our unitory vector
+            theta = np.arctan2(u[1],u[0])
+            if theta<0:
+                theta = 2*np.pi+theta
             theta_deg = theta/(2*np.pi)*360
-
+            
+            
             ret[0:7] = [x,y,theta_deg,X,Y,frameTrackingData[inds+0],frameTrackingData[inds+1]]
         
         # MOUSE
@@ -348,14 +354,16 @@ class MouseLeverDetector(Dlc):
             Y=frameTrackingData[inds+1]-y
             v=np.array([X,Y])
             ## make it a unitary vector, get the length
+            ## get the angle of this vector relative to 1,0
+            ## make it a unitary vector, get the length
             l = np.sqrt(np.dot(v,v))
             u = v/l
-            U = np.array([1,0]) # ref vector
-            ## get the angle between ref vector and our unitory vector
-            theta = np.arccos(np.dot(u,U))
-            if u[1]>0:
-                theta = 2*np.pi-theta
+            ## get the angle between 1,0 and our unitory vector
+            theta = np.arctan2(u[1],u[0])
+            if theta<0:
+                theta = 2*np.pi+theta
             theta_deg = theta/(2*np.pi)*360
+            
 
             ret[7:12] = [x,y,theta_deg,X,Y]
         
