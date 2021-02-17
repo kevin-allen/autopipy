@@ -248,7 +248,7 @@ class MouseLeverDetector(Dlc):
         # create a DataFrame
         posiOri = pd.DataFrame(self.posiOri,
              columns=["leverX", "leverY", "leverOri", "leverXHeading", "leverYHeading",
-                      "leverPressX", "leverPressY", 
+                      "leverPressX", "leverPressY", "leverBoxPLX", "leverBoxPLY" , "leverBoxPRX", "leverBoxPRY", 
                       "mouseX", "mouseY", "mouseOri", "mouseXHeading", "mouseYHeading"])
         # save to file
         posiOri.to_csv(fileName,index=False)
@@ -292,7 +292,7 @@ class MouseLeverDetector(Dlc):
         Return
             List containing 
                 lever.x, lever.y , lever.theta_deg, lever.X, lever.Y
-                leverPress.x, leverPress.y,
+                leverPress.x, leverPress.y, leverBoxPL.x, leverBoxPL.y , leverBoxPR.x, leverBoxPR.y, 
                 mouse.x, mouse.y , mouse.theta_deg, mouse.X, mouse.Y
                 
                 lever.x and lever.y are the middle point of the lever box for lever
@@ -300,7 +300,7 @@ class MouseLeverDetector(Dlc):
                 
                 lever.X and lever.Y are the vector from the x and y heading in the calculated orientation
         """
-        ret = np.empty(12) # to return the results
+        ret = np.empty(16) # to return the results
         ret[:] = np.nan # by default set to NaN
                
         # LEVER
@@ -334,7 +334,8 @@ class MouseLeverDetector(Dlc):
             theta_deg = theta/(2*np.pi)*360
             
             
-            ret[0:7] = [x,y,theta_deg,X,Y,frameTrackingData[inds+0],frameTrackingData[inds+1]]
+            ret[0:11] = [x,y,theta_deg,X,Y,frameTrackingData[inds+0],frameTrackingData[inds+1], 
+                         frameTrackingData[inds+3],frameTrackingData[inds+4],frameTrackingData[inds+6],frameTrackingData[inds+7]]
         
         # MOUSE
         # if we know where the mouse is, values for mouse starts at 
@@ -365,7 +366,7 @@ class MouseLeverDetector(Dlc):
             theta_deg = theta/(2*np.pi)*360
             
 
-            ret[7:12] = [x,y,theta_deg,X,Y]
+            ret[11:16] = [x,y,theta_deg,X,Y]
         
         return ret
         

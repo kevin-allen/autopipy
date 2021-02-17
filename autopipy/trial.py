@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 import sys
 from autopipy.navPath import NavPath
+from autopipy.lever import Lever
 
 class Trial:
     """
@@ -53,6 +54,7 @@ class Trial:
         self.bCoordMiddle = None # np array x y
         self.trialML = None # DataFrame, mouse and lever position data for this trial
         self.leverPosition = None # Dictionary with the median lever position
+        self.lever = None # Lever object to draw or to determine whether the animal is at or on the lever
         self.radiusPeriphery = None
         self.radiusLeverProximity = None
         self.traveledDistance = None
@@ -169,8 +171,7 @@ class Trial:
         
     
     def extractTrialFeatures(self,log,mLPosi,videoLog,aCoord,bCoord,
-                             arenaRadiusProportionToPeri=0.925,
-                             leverProximityRadiusProportion=1.4):
+                             arenaRadiusProportionToPeri=0.925):
         """
         Extract trial features 
         
@@ -223,19 +224,26 @@ class Trial:
                              "leverOri": np.nanmedian(self.trialML["leverOri"]),
                              "leverPressX" : np.nanmedian(self.trialML["leverPressX"]),
                              "leverPressY" : np.nanmedian(self.trialML["leverPressY"])}
+        self.lever = Lever()
+        self.lever.calculatePose(lp = np.array([np.nanmedian(self.trialML["leverPressX"]), np.nanmedian(self.trialML["leverPressY"])]),
+                                 pl = np.array([np.nanmedian(self.trialML["leverBoxPLX"]), np.nanmedian(self.trialML["leverBoxPLY"])]),
+                                 pr = np.array([np.nanmedian(self.trialML["leverBoxPRX"]), np.nanmedian(self.trialML["leverBoxPRY"])]))
         
         ################################################
         # define arena periphery and lever proximity  ##
         ################################################
         # radius from the arena center that defines the periphery of the arena
         self.radiusPeriphery = aCoord[2]*arenaRadiusProportionToPeri
-        # radius from the lever center that is defined as being at the lever
-        self.radiusLeverProximity = np.nanmedian(np.sqrt( (self.trialML.leverX-self.trialML.leverPressX)**2 +
-        (self.trialML.leverY-self.trialML.leverPressY)**2))*leverProximityRadiusProportion
+       
         
         #########################################
         # variables that evolve along the path ##
         #########################################
+        
+        # np.array, used later on to know if at the lever
+        mousePoints = np.stack((self.trialML.mouseX.to_numpy(),self.trialML.mouseY.to_numpy()),axis=1)
+        
+        
         # we will store all these Series in a DataFrame called pathDF
         distance = np.sqrt(np.diff(self.trialML.mouseX,prepend=np.NAN)**2+
                                 np.diff(self.trialML.mouseY,prepend=np.NAN)**2)
@@ -326,7 +334,7 @@ class Trial:
         ## sectioning the trial into different states  ##
         #################################################
         # define each frame as arena, bridge, lever or home base (NAN), one-hot encoding
-        self.stateDF=pd.DataFrame({"lever": self.pathDF.distanceFromLever<self.radiusLeverProximity,
+        self.stateDF=pd.DataFrame({"lever": self.lever.isAt(mousePoints) ,
                                    "arenaCenter": self.pathDF.distanceFromArenaCenter<self.radiusPeriphery,
                                    "arena": self.pathDF.distanceFromArenaCenter<self.aCoord[2],
                                    "bridge": ((self.trialML.mouseX > self.bCoord[0,0]) & 
@@ -813,12 +821,31 @@ class Trial:
         frame = cv2.circle(frame,
                                 (int(self.aCoord[0]),int(self.aCoord[1])),
                                 radius=int(self.radiusPeriphery), color=(50, 50, 50), thickness=1)
+                
+        ## Draw the lever, 
+        for i in range(len(self.lever.points[:,0])-1):
+            frame = cv2.line(frame,
+                            (int(self.lever.points[i,0]),int(self.lever.points[i,1])),
+                            (int(self.lever.points[i+1,0]),int(self.lever.points[i+1,1])),
+                            (200,200,200),1)
+        # final lever segment
+        frame = cv2.line(frame,
+                            (int(self.lever.points[len(self.lever.points[:,0])-1,0]),int(self.lever.points[len(self.lever.points[:,0])-1,1])),
+                            (int(self.lever.points[0,0]),int(self.lever.points[0,1])),
+                            (200,200,200),1)
         
-        ## Draw the lever zone, if there is a lever
-        if ~ (np.isnan(self.trialML.loc[index,"leverX"]) or np.isnan(self.trialML.loc[index,"leverX"])) :
-            frame = cv2.circle(frame,
-                               (int(self.trialML.loc[index,"leverX"]),int(self.trialML.loc[index,"leverY"])),
-                               radius=int(self.radiusLeverProximity), color=(50, 50, 50), thickness=1)
+        ## Draw the lever area
+        for i in range(len(self.lever.zonePoints[:,0])-1):
+            frame = cv2.line(frame,
+                            (int(self.lever.zonePoints[i,0]),int(self.lever.zonePoints[i,1])),
+                            (int(self.lever.zonePoints[i+1,0]),int(self.lever.zonePoints[i+1,1])),
+                            (200,200,200),2)
+        # final lever segment
+        frame = cv2.line(frame,
+                            (int(self.lever.zonePoints[len(self.lever.zonePoints[:,0])-1,0]),int(self.lever.zonePoints[len(self.lever.zonePoints[:,0])-1,1])),
+                            (int(self.lever.zonePoints[0,0]),int(self.lever.zonePoints[0,1])),
+                            (200,200,200),2)
+        
         
         self.frame = frame
        

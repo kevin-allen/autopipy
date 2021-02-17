@@ -208,12 +208,11 @@ class Session:
                                        bCoord = self.bridgeCoordinates)   
     def getTrialVariablesDataFrame(self):
         """
-        Get a DatatFrame with the variables of each trial
+        Get a DatatFrame with the variables of each trial, one row per trial
+        
         """
         dfList = [trial.getTrialVariables() for trial in self.trialList]
         self.trialVariables = pd.concat(dfList)
-        
-        
         
     def createTrialVideos(self):
         """
