@@ -29,7 +29,7 @@ autopipy has nothing to do with training deeplabcut models, but if you need to r
 
 ## autopipy classes for object detection
 
-You can use the classes defined in dlcObjectDetectors.py to use these models for inference. Some of these classes are listed below.
+You can use the classes defined in `dlcObjectDetectors.py` to use these models for inference. Some of these classes are listed below.
 
 * `LeverDetector`
 * `MouseLeverDetector`
