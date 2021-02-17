@@ -31,10 +31,10 @@ autopipy has nothing to do with training deeplabcut models, but if you need to r
 
 You can use the classes defined in dlcObjectDetectors.py to use these models for inference. Some of these classes are listed below.
 
-* leverDetector
-* mouseLeverDetector
-* bridgeDetector
+* `LeverDetector`
+* `MouseLeverDetector`
+* `BridgeDetector`
 
-Tips: The arenaDetector class is not using dlc and is stored in cvObjectDetectors.py
+Tips: The `ArenaDetector` class is not using dlc and is stored in cvObjectDetectors.py
 
 You can have a look at the function `positionTrackingFromArenaTopVideo` in the file `video_utilities.py` to see how to use these models.
