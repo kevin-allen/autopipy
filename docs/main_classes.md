@@ -15,8 +15,8 @@ We use classes to organize the code in a logical structure that closely maps ont
 * **ArenaDetector**: Detects the arena in video. The arena is detected using the opencv library.
 
 ### Other classes
-* **Project**: Represents a research project or experiment containing a list of sessions.
-* **Session**: Represents a single session. This class can check that we have all the needed files for analysis. It also get trial times from the log file.
-* **Trial**: Represents a single trial. This takes care of extracting the trial features and make trial related stuff (videos).
+* **Project**: Represents a research project or experiment containing a list of `Session` objects.
+* **Session**: Represents a single session. This class can check that we have all the needed files for analysis. It also get trial times from the log file. It can have a list of `Trial` objects.
+* **Trial**: Represents a single trial. This takes care of extracting certain trial features and can create video of the trial (videos). It also uses `NavPath` objects to get the search and homing paths features.
 * **NavPath**: Represents a path of an animal. This will extract different variables from it (e.g. distance, directional vector length).
 * **Lever**: Represents the lever location in a trial. The class can be used to know if the animal is in the lever zone (right next to the lever).
