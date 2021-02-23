@@ -61,3 +61,16 @@ class Project:
             self.sessionList =  [ Session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False) for sessionName in sessionNameList]
         else :
             self.sessionList =  [ Session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False, arenaTopVideo=False,homeBaseVideo=False) for sessionName in sessionNameList]
+    
+    def getTrialVariables(self):
+        """
+        Concanate the trial variables of all sessions in the project
+        
+        You should call call extractTrialFeatures() getTrialVariablesDataFrame() on each session before calling this
+        
+        return a pandas dataframe
+        """
+    
+        dfList = [ses.trialVariables for ses in self.sessionList]
+        return pd.concat(dfList)
+        

@@ -197,7 +197,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     arenaImageFile=ses.path+"/arenaDetection.png"
     arenaD = ArenaDetector()
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=arenaMinRadius, 
-                                  maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circle=arenaCircleMethod)
+                                  maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
     arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
 
     configFile = modelDir+"/"+ bridge640_480Model+"/config.yaml"
@@ -240,9 +240,11 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     duration = now-start_time
     print("Time elapsed", str(duration))
     
-    
-    labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
-    mouseLeverD.labelVideoMouseLever(pathVideoFile=croppedVideoFile,pathOutputFile=labeledVideoFile)
+    #############################
+    # need to fix this function #
+    #############################
+    #labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
+    #mouseLeverD.labelVideoMouseLever(pathVideoFile=croppedVideoFile,pathOutputFile=labeledVideoFile)
 
     now = datetime.now()
     duration = now-start_time
@@ -252,7 +254,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     arenaImageFile=ses.path+"/arenaDetectionCropped.png"
     arenaD = ArenaDetector()
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=arenaMinRadius, 
-                                  maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circle=arenaCircleMethod)
+                                  maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
     arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
     np.savetxt(ses.fileNames["arenaCoordinates"],aCoord,delimiter=",") 
 

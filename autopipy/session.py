@@ -2,6 +2,7 @@ import os.path
 import os
 import pandas as pd
 import numpy as np
+import cv2
 from autopipy.trial import Trial
 class Session:
     """
@@ -106,7 +107,86 @@ class Session:
         self.videoLog = pd.read_csv(self.fileNames["arena_top.log"], delimiter=" ")
         self.arenaCoordinates = np.loadtxt(self.fileNames["arenaCoordinates"])
         self.bridgeCoordinates = np.genfromtxt(self.fileNames["bridgeCoordinates"],delimiter=",")
+        
+        print("Lenght of mouseLeverPosi: {}".format(len(self.mouseLeverPosi)))
+        print("Lenght of videoLog: {}".format(len(self.videoLog)))
     
+        if len(self.mouseLeverPosi) != len(self.videoLog):
+            print("Length of mouseLeverPosi ({}) is not equal to videoLog ({})".format(len(self.mouseLeverPosi),len(self.videoLog)))
+            print("Problem with the length of the arena_top.avi and arena_top.log")
+            newDf = self.fixVideoLog(self.videoLog)
+            self.videoLog = newDf
+            
+    def testVideoLogSynchronization(self):
+        """
+        
+        Method to assess whether the video and the video log are synchronized and whether there are problems associated with these files
+        
+        Test if we have the same number of video frames as entries in the video log
+        Test if we have all the frames in the log
+        Test whether there are long gap between frames
+        Test what is the sampling rate of the video
+        """
+        
+        cap = cv2.VideoCapture(self.fileNames["arena_top.avi"])
+        nFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        cap.release() 
+        
+        self.videoLog = pd.read_csv(self.fileNames["arena_top.log"], delimiter=" ") # One row per frame, presumably
+        
+        self.syncrhoDifference = nFrames-len(self.videoLog.time)
+        self.synchroProblemIndices = self.videoLog.index[self.videoLog.frame_number.diff()!=1]
+        self.synchroFirstFrame = self.videoLog.frame_number[0]
+        self.synchroGapLengths = self.videoLog.frame_number.diff()[self.videoLog.frame_number.diff()>1]
+        self.synchroMeanFrameTimeDiff=self.videoLog.time.diff().mean()
+        self.synchroMaxFrameTimeDiff=self.videoLog.time.diff().max()
+        self.synchroProblemTimeDiff = np.sum(self.videoLog.time.diff()>0.25)
+        self.synchroMeanFrameRate= nFrames/(self.videoLog.time.max()-self.videoLog.time.min())
+        print("{}, video len: {}, video-log:{}, first frame: {}, max log gap: {}, mean time diff: {:.3}, max time diff: {:.3}, num problem diff: {}, frame rate: {:.3}".format(self.name,
+                                                                                            nFrames,
+                                                                                            self.syncrhoDifference,
+                                                                                             self.synchroFirstFrame,
+                                                                                             self.synchroGapLengths.max(),
+                                                                                            self.synchroMeanFrameTimeDiff,
+                                                                                             self.synchroMaxFrameTimeDiff,
+                                                                                              self.synchroProblemTimeDiff,
+                                                                                              self.synchroMeanFrameRate))
+        
+        
+        
+    def fixVideoLog(self,vl):
+        removeCount=0
+        addCount=0
+        while np.sum(vl.frame_number.diff() != 1) > 1:
+
+            problemIndices = vl.index[vl.frame_number != vl.index]
+            firstProblemIndex = problemIndices[0]
+            print("first problem index: {}".format(firstProblemIndex))
+            print(vl.loc[(firstProblemIndex-1):(firstProblemIndex+1),:])
+            if vl.loc[firstProblemIndex,"frame_number"] < firstProblemIndex :
+                print("Duplicate frames in the Videolog at index {}".format(firstProblemIndex))
+            else :
+                print("Missing frame in the Videolog at index {}".format(firstProblemIndex))
+                print("Inserting the missing entry")
+                # get data frame before
+                df1 = vl.loc[:firstProblemIndex-1,:]
+                # get one line dataframe
+                df2 = pd.DataFrame({"frame_number" : [vl.frame_number[firstProblemIndex]-1],
+                               "time" : [vl.time[firstProblemIndex-1]+ vl.time[firstProblemIndex] - vl.time[firstProblemIndex-1] ]  })
+                # get data frame after
+                df3 = vl.loc[firstProblemIndex:,:]
+                # concatenate data frames
+                dfNew = pd.concat([df1,df2,df3])
+                print("fixed DataFrame")
+                dfNew = dfNew.set_index(np.arange(len(dfNew.time)))
+                print(dfNew.loc[(firstProblemIndex-1):(firstProblemIndex+1),:])
+                addCount=addCount+1
+                vl = dfNew
+
+                problemIndices = vl.index[vl.frame_number != vl.index]
+                print("Problem indices after fix: {}".format(len(problemIndices)))
+        print("Removed {} rows and added {} rows".format(removeCount,addCount))
+        return vl
     
     def segmentTrialsFromLog(self):
         """

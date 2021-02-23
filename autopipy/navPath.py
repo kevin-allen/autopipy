@@ -33,7 +33,7 @@ class NavPath:
         self.pPose = pPose
         self.targetPose = targetPose
         self.name = name
-        if self.pPose.shape[0] == 0 :  
+        if self.pPose is None or self.pPose.shape[0] < 2 :  
             print("{} :empty NavPath created".format(self.name))
             self.length = np.NAN
             self.duration = np.NAN
