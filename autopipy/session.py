@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
 from autopipy.trial import Trial
 class Session:
     """
@@ -192,7 +193,7 @@ class Session:
         """
         Identify the begining and end of each trial from the log file
         
-        A trial is define by the opening and closing of the home base door. 
+        A trial in this function is defined by the opening and closing of the home base door. 
         
         The trial starts when the door opens and ends when the door closes.
         
@@ -316,3 +317,71 @@ class Session:
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
+    def trialPathFigure(self,fileName=None,arenaRadius = 40,arenaRadiusProportionToPeri=0.925):
+        """
+        Create a figure with the trial paths.
+        
+        It is a great way to double-check that the trial analysis when as expected.
+        
+        Arguments:
+            fileName: file in which to save the figure, by default it goes in self.fileBase+"_trialPaths.pdf"
+            arenaRadius: radius of the arena in cm
+            arenaRadiusProportionToPeri: proportion of the arena radius where the periphery of the arena is defined
+        """
+        # to plot the arena circle
+        arena=np.arange(start=0,stop=2*np.pi,step=0.02)
+        
+        
+        fig, axes = plt.subplots(2,4,figsize=(20,10))
+        plt.subplots_adjust(wspace=0.3,hspace=0.3)
+
+        # what needs to be applied to all graphs
+        for ax in axes.flatten():
+            ax.set_aspect('equal', adjustable='box')
+            ax.plot(np.cos(arena)*arenaRadius,np.sin(arena)*arenaRadius,label="Arena",color="gray")
+            ax.plot(np.cos(arena)*arenaRadius*arenaRadiusProportionToPeri,np.sin(arena)*arenaRadius*arenaRadiusProportionToPeri,label="Periphery",color="gray",linestyle='dashed')
+            ax.set_xlabel("cm")
+            ax.set_ylabel("cm")
+        axes[0,0].set_title("Search-light paths")
+        axes[0,1].set_title("Search-light no lever paths")
+        axes[0,2].set_title("Search-dark paths")
+        axes[0,3].set_title("Search-dark no lever paths")
+
+        axes[1,0].set_title("Homing-light paths")
+        axes[1,1].set_title("Homing-light to peri paths")
+        axes[1,2].set_title("Homing-dark paths")
+        axes[1,3].set_title("Homing-dark to peri paths")
+        
+        
+        lightTrials = [t for t in self.trialList if t.light=="light" and t.valid]
+        darkTrials =  [t for t in self.trialList if t.light=="dark" and t.valid]
+
+        for t in lightTrials:
+            axes[0,0].plot(t.searchTotalNavPath.pPose[:,0],t.searchTotalNavPath.pPose[:,1])
+
+        for t in lightTrials:
+            axes[0,1].plot(t.searchArenaNoLeverNavPath.pPose[:,0],t.searchArenaNoLeverNavPath.pPose[:,1])
+
+        for t in darkTrials:
+            axes[0,2].plot(t.searchTotalNavPath.pPose[:,0],t.searchTotalNavPath.pPose[:,1])
+
+        for t in darkTrials:
+            axes[0,3].plot(t.searchArenaNoLeverNavPath.pPose[:,0],t.searchArenaNoLeverNavPath.pPose[:,1])
+
+        for t in lightTrials:
+            axes[1,0].plot(t.homingTotalNavPath.pPose[:,0],t.homingTotalNavPath.pPose[:,1])
+
+        for t in lightTrials:
+            axes[1,1].plot(t.homingPeriNoLeverNavPath.pPose[:,0],t.homingPeriNoLeverNavPath.pPose[:,1])
+
+        for t in darkTrials:
+            axes[1,2].plot(t.homingTotalNavPath.pPose[:,0],t.homingTotalNavPath.pPose[:,1])
+
+        for t in darkTrials:
+            axes[1,3].plot(t.homingPeriNoLeverNavPath.pPose[:,0],t.homingPeriNoLeverNavPath.pPose[:,1])
+
+
+        if fileName is None:
+            fileName = self.fileBase+"_trialPaths.pdf"
+        print("Saving trialPaths in " + fileName)
+        plt.savefig(fileName)

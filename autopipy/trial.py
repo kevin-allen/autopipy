@@ -14,6 +14,17 @@ class Trial:
     
     When calculating angles, the y coordinate is reversed (0-y) so that 90 degree is up.
     This is done because the y-axis is reversed in the videos.
+    
+    The position data that come into this class are in pixels, as the position data were extracted from a video.
+    
+    To be able to compare data from different sessions, we convert the position data from pixels to cm and 
+    move the 0,0 origin to the center of the arena. This transformation is done when extracting trial features. 
+    There are some variables ending by Px that contain data in pixels to be able to draw in video frames.
+    The variables ending with Cm are in cm.
+    When not explicitely specified, the values are in cm
+    Note that the transformation between pixels to cm representation involve a translation to shift the origin to the center of the arena
+    
+    
      
     Attributes:
         name: Name of the trial, usually session_trialNo
@@ -35,6 +46,8 @@ class Trial:
         lightFromCode()
         previousLight()
         getTrialVariables()
+        dataToCm()
+        dataToPx()
         
     """
     def __init__(self,sessionName,trialNo,startTime,endTime,startTimeWS,endTimeWS):
@@ -51,19 +64,26 @@ class Trial:
         self.light = None
         self.startVideoIndex = None
         self.endVideoIndex = None
-        self.aCoord = None # np array (x y r)
-        self.bCoord = None # np array
-        self.bCoordMiddle = None # np array x y
-        self.trialML = None # DataFrame, mouse and lever position data for this trial
+        self.aCoordCm = None # np array (x y r)
+        self.aCoordPx = None
+        self.bCoordCm = None # np array
+        self.bCoordMiddleCm = None # np array x y
+        self.bCoordPx = None # np array
+        self.bCoordMiddlePx = None # np array x y
+        self.trialMLPx = None # DataFrame, mouse and lever position data for this trial
+        self.trialMLCm = None # DataFrame, mouse and lever position for the trial, in cm
         self.leverPosition = None # Dictionary with the median lever position
-        self.lever = None # Lever object to draw or to determine whether the animal is at or on the lever
-        self.radiusPeriphery = None
+        self.leverPx = None # Lever object to draw or to determine whether the animal is at or on the lever, in px world to draw in video
+        self.leverCm = None # Lever object to draw or to determine whether the animal is at or on the lever, in cm world for analysis
+        self.radiusPeripheryCm = None
+        self.radiusPeripheryPx = None
         self.radiusLeverProximity = None
         self.traveledDistance = None
         self.pathDF = None # DataFrame, instantaneous variable evolving during the trial (e.g., distance run)
         self.leverPress = None # DataFrame with Ros time and video index of lever presses
         self.nLeverPresses = None 
-        self.peripheryAfterFirstLeverPressCoord = None
+        self.peripheryAfterFirstLeverPressCoordCm = None
+        self.peripheryAfterFirstLeverPressCoordPx = None
         self.arenaToBridgeAngle = None
         self.arenaToMousePeriAngle = None
         self.stateDF = None # DataFrame with the categorical position of the mouse (Bridge, Arena, ArenaCenter, Lever, Gap)
@@ -105,82 +125,100 @@ class Trial:
                        "endTimeWS": [self.endTimeWS],
                        "duration": [self.duration],
                        "light": [self.light],
-                       "leverPositionX" : [self.leverPosition["leverX"]],
-                       "leverPositionY" : [self.leverPosition["leverY"]],
-                       "leverPositionOri": [self.leverPosition["leverOri"]],
-                       "leverPressX": [self.leverPosition["leverPressX"]],
-                       "leverPressY": [self.leverPosition["leverPressY"]],
+                       "arenaRadiusCm": [self.arenaRadiusCm],
+                       "leverPositionX" : [self.leverPositionCm["leverX"]],
+                       "leverPositionY" : [self.leverPositionCm["leverY"]],
+                       "leverPositionOri": [self.leverPositionCm["leverOri"]],
+                       "leverPressX": [self.leverPositionCm["leverPressX"]],
+                       "leverPressY": [self.leverPositionCm["leverPressY"]],
                        "nLeverPresses" : [self.nLeverPresses],
                        "nJourneys" : [self.nJourneys],
                        "travelledDistance" : [self.traveledDistance],
                        "anglularErrorHomingPeri" : self.periArenaCenterBridgeAngle,
                        # for searchTotal path 
-                       "searchTotal-length" : [self.searchTotalNavPath.length],
-                       "searchTotal-duration" : [self.searchTotalNavPath.duration],
-                        "searchTotal-meanVectorLengthPosi" : [self.searchTotalNavPath.meanVectorLengthPosi],
-                        "searchTotal-meanVectorDirectionPosi": [self.searchTotalNavPath.meanVectorDirectionPosi],
-                        "searchTotal-meanVectorLengthOri" : [self.searchTotalNavPath.meanVectorLengthOri[0]],
-                        "searchTotal-meanVectorDirectionOri" : [self.searchTotalNavPath.meanVectorDirectionOri[0]],
-                        "searchTotal-meanSpeed" : [self.searchTotalNavPath.meanSpeed],
-                        "searchTotal-medianMVDeviationToTarget" : [self.searchTotalNavPath.medianMVDeviationToTarget],
-                        "searchTotal-medianHDDeviationToTarget" : [self.searchTotalNavPath.medianHDDeviationToTarget],
+                       "searchTotal_length" : [self.searchTotalNavPath.length],
+                       "searchTotal_duration" : [self.searchTotalNavPath.duration],
+                        "searchTotal_meanVectorLengthPosi" : [self.searchTotalNavPath.meanVectorLengthPosi],
+                        "searchTotal_meanVectorDirectionPosi": [self.searchTotalNavPath.meanVectorDirectionPosi],
+                        "searchTotal_meanVectorLengthOri" : [self.searchTotalNavPath.meanVectorLengthOri[0]],
+                        "searchTotal_meanVectorDirectionOri" : [self.searchTotalNavPath.meanVectorDirectionOri[0]],
+                        "searchTotal_meanSpeed" : [self.searchTotalNavPath.meanSpeed],
+                        "searchTotal_medianMVDeviationToTarget" : [self.searchTotalNavPath.medianMVDeviationToTarget],
+                        "searchTotal_medianHDDeviationToTarget" : [self.searchTotalNavPath.medianHDDeviationToTarget],
                       # for searchArena path 
-                       "searchArena-length" : [self.searchArenaNavPath.length],
-                       "searchArena-duration" : [self.searchArenaNavPath.duration],
-                        "searchArena-meanVectorLengthPosi" : [self.searchArenaNavPath.meanVectorLengthPosi],
-                        "searchArena-meanVectorDirectionPosi": [self.searchArenaNavPath.meanVectorDirectionPosi],
-                        "searchArena-meanVectorLengthOri" : [self.searchArenaNavPath.meanVectorLengthOri[0]],
-                        "searchArena-meanVectorDirectionOri" : [self.searchArenaNavPath.meanVectorDirectionOri[0]],
-                        "searchArena-meanSpeed" : [self.searchArenaNavPath.meanSpeed],
-                        "searchArena-medianMVDeviationToTarget" : [self.searchArenaNavPath.medianMVDeviationToTarget],
-                        "searchArena-medianHDDeviationToTarget" : [self.searchArenaNavPath.medianHDDeviationToTarget],
+                       "searchArena_length" : [self.searchArenaNavPath.length],
+                       "searchArena_duration" : [self.searchArenaNavPath.duration],
+                        "searchArena_meanVectorLengthPosi" : [self.searchArenaNavPath.meanVectorLengthPosi],
+                        "searchArena_meanVectorDirectionPosi": [self.searchArenaNavPath.meanVectorDirectionPosi],
+                        "searchArena_meanVectorLengthOri" : [self.searchArenaNavPath.meanVectorLengthOri[0]],
+                        "searchArena_meanVectorDirectionOri" : [self.searchArenaNavPath.meanVectorDirectionOri[0]],
+                        "searchArena_meanSpeed" : [self.searchArenaNavPath.meanSpeed],
+                        "searchArena_medianMVDeviationToTarget" : [self.searchArenaNavPath.medianMVDeviationToTarget],
+                        "searchArena_medianHDDeviationToTarget" : [self.searchArenaNavPath.medianHDDeviationToTarget],
                        # for searchArenaNoLever path
-                       "searchArenaNoLever-length" : [self.searchArenaNoLeverNavPath.length],
-                       "searchArenaNoLever-duration" : [self.searchArenaNoLeverNavPath.duration],
-                        "searchArenaNoLever-meanVectorLengthPosi" : [self.searchArenaNoLeverNavPath.meanVectorLengthPosi],
-                        "searchArenaNoLever-meanVectorDirectionPosi": [self.searchArenaNoLeverNavPath.meanVectorDirectionPosi],
-                        "searchArenaNoLever-meanVectorLengthOri" : [self.searchArenaNoLeverNavPath.meanVectorLengthOri[0]],
-                        "searchArenaNoLever-meanVectorDirectionOri" : [self.searchArenaNoLeverNavPath.meanVectorDirectionOri[0]],
-                        "searchArenaNoLever-meanSpeed" : [self.searchArenaNoLeverNavPath.meanSpeed],
-                        "searchArenaNoLever-medianMVDeviationToTarget" : [self.searchArenaNoLeverNavPath.medianMVDeviationToTarget],
-                        "searchArenaNoLever-medianHDDeviationToTarget" : [self.searchArenaNoLeverNavPath.medianHDDeviationToTarget],
+                       "searchArenaNoLever_length" : [self.searchArenaNoLeverNavPath.length],
+                       "searchArenaNoLever_duration" : [self.searchArenaNoLeverNavPath.duration],
+                        "searchArenaNoLever_meanVectorLengthPosi" : [self.searchArenaNoLeverNavPath.meanVectorLengthPosi],
+                        "searchArenaNoLever_meanVectorDirectionPosi": [self.searchArenaNoLeverNavPath.meanVectorDirectionPosi],
+                        "searchArenaNoLever_meanVectorLengthOri" : [self.searchArenaNoLeverNavPath.meanVectorLengthOri[0]],
+                        "searchArenaNoLever_meanVectorDirectionOri" : [self.searchArenaNoLeverNavPath.meanVectorDirectionOri[0]],
+                        "searchArenaNoLever_meanSpeed" : [self.searchArenaNoLeverNavPath.meanSpeed],
+                        "searchArenaNoLever_medianMVDeviationToTarget" : [self.searchArenaNoLeverNavPath.medianMVDeviationToTarget],
+                        "searchArenaNoLever_medianHDDeviationToTarget" : [self.searchArenaNoLeverNavPath.medianHDDeviationToTarget],
                        # for the homingTotal path 
-                       "homingTotal-length" : [self.homingTotalNavPath.length],
-                       "homingTotal-duration" : [self.homingTotalNavPath.duration],
-                        "homingTotal-meanVectorLengthPosi" : [self.homingTotalNavPath.meanVectorLengthPosi],
-                        "homingTotal-meanVectorDirectionPosi": [self.homingTotalNavPath.meanVectorDirectionPosi],
-                        "homingTotal-meanVectorLengthOri" : [self.homingTotalNavPath.meanVectorLengthOri[0]],
-                        "homingTotal-meanVectorDirectionOri" : [self.homingTotalNavPath.meanVectorDirectionOri[0]],
-                        "homingTotal-meanSpeed" : [self.homingTotalNavPath.meanSpeed],
-                        "homingTotal-medianMVDeviationToTarget" : [self.homingTotalNavPath.medianMVDeviationToTarget],
-                        "homingTotal-medianHDDeviationToTarget" : [self.homingTotalNavPath.medianHDDeviationToTarget],
+                       "homingTotal_length" : [self.homingTotalNavPath.length],
+                       "homingTotal_duration" : [self.homingTotalNavPath.duration],
+                        "homingTotal_meanVectorLengthPosi" : [self.homingTotalNavPath.meanVectorLengthPosi],
+                        "homingTotal_meanVectorDirectionPosi": [self.homingTotalNavPath.meanVectorDirectionPosi],
+                        "homingTotal_meanVectorLengthOri" : [self.homingTotalNavPath.meanVectorLengthOri[0]],
+                        "homingTotal_meanVectorDirectionOri" : [self.homingTotalNavPath.meanVectorDirectionOri[0]],
+                        "homingTotal_meanSpeed" : [self.homingTotalNavPath.meanSpeed],
+                        "homingTotal_medianMVDeviationToTarget" : [self.homingTotalNavPath.medianMVDeviationToTarget],
+                        "homingTotal_medianHDDeviationToTarget" : [self.homingTotalNavPath.medianHDDeviationToTarget],
                        # for the homingPeri path
-                       "homingPeri-length" : [self.homingPeriNavPath.length],
-                       "homingPeri-duration" : [self.homingPeriNavPath.duration],
-                        "homingPeri-meanVectorLengthPosi" : [self.homingPeriNavPath.meanVectorLengthPosi],
-                        "homingPeri-meanVectorDirectionPosi": [self.homingPeriNavPath.meanVectorDirectionPosi],
-                        "homingPeri-meanVectorLengthOri" : [self.homingPeriNavPath.meanVectorLengthOri[0]],
-                        "homingPeri-meanVectorDirectionOri" : [self.homingPeriNavPath.meanVectorDirectionOri[0]],
-                        "homingPeri-meanSpeed" : [self.homingPeriNavPath.meanSpeed],
-                        "homingPeri-medianMVDeviationToTarget" : [self.homingPeriNavPath.medianMVDeviationToTarget],
-                        "homingPeri-medianHDDeviationToTarget" : [self.homingPeriNavPath.medianHDDeviationToTarget],
+                       "homingPeri_length" : [self.homingPeriNavPath.length],
+                       "homingPeri_duration" : [self.homingPeriNavPath.duration],
+                        "homingPeri_meanVectorLengthPosi" : [self.homingPeriNavPath.meanVectorLengthPosi],
+                        "homingPeri_meanVectorDirectionPosi": [self.homingPeriNavPath.meanVectorDirectionPosi],
+                        "homingPeri_meanVectorLengthOri" : [self.homingPeriNavPath.meanVectorLengthOri[0]],
+                        "homingPeri_meanVectorDirectionOri" : [self.homingPeriNavPath.meanVectorDirectionOri[0]],
+                        "homingPeri_meanSpeed" : [self.homingPeriNavPath.meanSpeed],
+                        "homingPeri_medianMVDeviationToTarget" : [self.homingPeriNavPath.medianMVDeviationToTarget],
+                        "homingPeri_medianHDDeviationToTarget" : [self.homingPeriNavPath.medianHDDeviationToTarget],
                        # for the homingPeriNoLever
-                       "homingPeriNoLever-length" : [self.homingPeriNoLeverNavPath.length],
-                       "homingPeriNoLever-duration" : [self.homingPeriNoLeverNavPath.duration],
-                        "homingPeriNoLever-meanVectorLengthPosi" : [self.homingPeriNoLeverNavPath.meanVectorLengthPosi],
-                        "homingPeriNoLever-meanVectorDirectionPosi": [self.homingPeriNoLeverNavPath.meanVectorDirectionPosi],
-                        "homingPeriNoLever-meanVectorLengthOri" : [self.homingPeriNoLeverNavPath.meanVectorLengthOri[0]],
-                        "homingPeriNoLever-meanVectorDirectionOri" : [self.homingPeriNoLeverNavPath.meanVectorDirectionOri[0]],
-                        "homingPeriNoLever-meanSpeed" : [self.homingPeriNoLeverNavPath.meanSpeed],
-                        "homingPeriNoLever-medianMVDeviationToTarget" : [self.homingPeriNoLeverNavPath.medianMVDeviationToTarget],
-                        "homingPeriNoLever-medianHDDeviationToTarget" : [self.homingPeriNoLeverNavPath.medianHDDeviationToTarget]} 
+                       "homingPeriNoLever_length" : [self.homingPeriNoLeverNavPath.length],
+                       "homingPeriNoLever_duration" : [self.homingPeriNoLeverNavPath.duration],
+                        "homingPeriNoLever_meanVectorLengthPosi" : [self.homingPeriNoLeverNavPath.meanVectorLengthPosi],
+                        "homingPeriNoLever_meanVectorDirectionPosi": [self.homingPeriNoLeverNavPath.meanVectorDirectionPosi],
+                        "homingPeriNoLever_meanVectorLengthOri" : [self.homingPeriNoLeverNavPath.meanVectorLengthOri[0]],
+                        "homingPeriNoLever_meanVectorDirectionOri" : [self.homingPeriNoLeverNavPath.meanVectorDirectionOri[0]],
+                        "homingPeriNoLever_meanSpeed" : [self.homingPeriNoLeverNavPath.meanSpeed],
+                        "homingPeriNoLever_medianMVDeviationToTarget" : [self.homingPeriNoLeverNavPath.medianMVDeviationToTarget],
+                        "homingPeriNoLever_medianHDDeviationToTarget" : [self.homingPeriNoLeverNavPath.medianHDDeviationToTarget]} 
         return pd.DataFrame(self.myDict)
-        
+    def trialMLToCm(self):
+        """
+        Transform mouse and lever data to cm and 0,0 at the center of arena
+
+        returns a new data frame
+        """
+        # select column by names ending with X
+        df = self.trialMLPx.copy()
+        df1 = (df.filter(regex=("X$"))-self.originPxToCm[0])/self.pxPerCm ## to cm
+        df2 = (df.filter(regex=("Y$"))-self.originPxToCm[1])/self.pxPerCm ## to cm
+        df3 = df.filter(regex=("Heading"))
+        df4 = df.filter(regex=("Ori"))
+        dfm = pd.concat([df1,df2,df3,df4],axis=1) # remerge
+        return dfm
+
+    
     
     def extractTrialFeatures(self,log,mLPosi,videoLog,aCoord,bCoord,
-                             arenaRadiusProportionToPeri=0.925, printName = False):
+                             arenaRadiusProportionToPeri=0.925, printName = False, arenaRadiusCm=40):
         """
-        Extract trial features 
+        Extract trial features
+        
+        The input data from mLPosi, aCoord and bCoord are in pixels and are transform in cm.
         
         Arguments
             log: DataFrame with event log of the session
@@ -192,6 +230,33 @@ class Trial:
             printName: Boolean indicating whether to print the trial name
             
         """
+        
+        
+        ##############################################
+        ### get data to transform from pixels to cm ##
+        ##############################################
+        self.arenaRadiusCm = arenaRadiusCm
+        self.pxPerCm = aCoord[2]/self.arenaRadiusCm # to go from pixels to cm
+        self.originPxToCm = aCoord[:2] # the 0,0 in the cm world     
+        #print("A radius cm: {}, A radius px:{}, pxPerCm: {}, originPxToCm: {}".format(self.arenaRadiusCm,aCoord[2],self.pxPerCm, self.originPxToCm))
+         
+        #######################################
+        ## arena and bridge coordinates in cm##
+        #######################################  
+        self.aCoordPx = aCoord
+        self.aCoordCm = np.array([0,0,self.arenaRadiusCm]) #
+        self.bCoordPx = bCoord
+        self.bCoordMiddlePx = self.bCoordPx[0] + (self.bCoordPx[2]-self.bCoordPx[0])/2
+        self.bCoordCm = (bCoord-self.originPxToCm)/self.pxPerCm
+        self.bCoordMiddleCm = self.bCoordCm[0] + (self.bCoordCm[2]-self.bCoordCm[0])/2
+        
+          
+        ## mouse and lever position
+        self.trialMLPx = mLPosi[(videoLog.time > self.startTime) & (videoLog.time < self.endTime)] 
+        self.trialMLCm = self.trialMLToCm()
+    
+
+        ## test the synchronization at for the whole session as an extra precaution
         if len(videoLog.time) != len(mLPosi.mouseX):
             print("videoLog {} is not the same length as mLPosi {}".format(len(videoLog.time),len(mLPosi.mouseX)))
             print("self.valid set to False")
@@ -205,16 +270,7 @@ class Trial:
         lightCode = self.previousLight(log)
         self.light = self.lightFromCode(lightCode)
         
-        
-        ##################################
-        ## arena and bridge coordinates ##
-        ##################################
-        self.aCoord = aCoord
-        self.bCoord = bCoord
-        self.bCoordMiddle = self.bCoord[0] + (self.bCoord[2]-self.bCoord[0])/2
-        
-        ## mouse and lever position
-        self.trialML = mLPosi[(videoLog.time > self.startTime) & (videoLog.time < self.endTime)] 
+       
         
         #####################################################################
         ## there could be trials in which the mouse was never on the arena ##
@@ -222,8 +278,8 @@ class Trial:
         ## we need to deal with these trials                               ##
         ## all mouse position will be at np.NAN                            ##
         #####################################################################
-        validMouse = np.sum(~np.isnan(self.trialML.mouseX)) 
-        if np.sum(~np.isnan(self.trialML.mouseX)) < 20:
+        validMouse = np.sum(~np.isnan(self.trialMLPx.mouseX)) 
+        if np.sum(~np.isnan(self.trialMLPx.mouseX)) < 20:
             print("{}, the mouse was detected for fewer than 20 frames during the trial".format(self.name))
             print("self.valid set to False")
             self.valid = False
@@ -235,8 +291,8 @@ class Trial:
         ## or if door open event is late                                               ##
         ## we modify self.startTime during this procedure if needed                    ##
         #################################################################################
-        isBridge =  ((self.trialML.mouseX.iloc[0] > self.bCoord[0,0]) & (self.trialML.mouseX.iloc[0] < self.bCoord[2,0]) & (self.trialML.mouseY.iloc[0] > self.bCoord[0,1]) &                                        (self.trialML.mouseY.iloc[0] < self.bCoord[2,1]))
-        isHome = np.isnan(self.trialML.mouseX.iloc[0]) # mouse not in the field of view
+        isBridge =  ((self.trialMLCm.mouseX.iloc[0] > self.bCoordCm[0,0]) & (self.trialMLCm.mouseX.iloc[0] < self.bCoordCm[2,0]) & (self.trialMLCm.mouseY.iloc[0] > self.bCoordCm[0,1]) &                                        (self.trialMLCm.mouseY.iloc[0] < self.bCoordCm[2,1]))
+        isHome = np.isnan(self.trialMLCm.mouseX.iloc[0]) # mouse not in the field of view
         if not(isBridge or isHome):
             maxBackward=-2.0 # we can move the startTime by a maximum of 2 s
             step=0.1 # 100 ms for each backward jump
@@ -245,9 +301,10 @@ class Trial:
             while(back>maxBackward):
                 back=back-step
                 self.startTime = self.startTime + back # back is negative
-                self.trialML = mLPosi[(videoLog.time > self.startTime) & (videoLog.time < self.endTime)] 
-                isBridge =  ((self.trialML.mouseX.iloc[0] > self.bCoord[0,0]) & (self.trialML.mouseX.iloc[0] < self.bCoord[2,0]) & (self.trialML.mouseY.iloc[0] > self.bCoord[0,1]) &                                        (self.trialML.mouseY.iloc[0] < self.bCoord[2,1]))
-                isHome = np.isnan(self.trialML.mouseX.iloc[0]) # mouse not in the field of view
+                self.trialMLPx = mLPosi[(videoLog.time > self.startTime) & (videoLog.time < self.endTime)] 
+                self.trialMLCm = self.trialMLToCm()
+                isBridge =  ((self.trialMLCm.mouseX.iloc[0] > self.bCoordCm[0,0]) & (self.trialMLCm.mouseX.iloc[0] < self.bCoordCm[2,0]) & (self.trialMLCm.mouseY.iloc[0] > self.bCoordCm[0,1]) &                                        (self.trialMLCm.mouseY.iloc[0] < self.bCoordCm[2,1]))
+                isHome = np.isnan(self.trialMLCm.mouseX.iloc[0]) # mouse not in the field of view
                 if (isBridge or isHome):
                     break
                     
@@ -255,11 +312,12 @@ class Trial:
             ###########################################################
             # update the mouse and lever tracking data for the trial ##
             ###########################################################
-            self.trialML = mLPosi[(videoLog.time > self.startTime) & (videoLog.time < self.endTime)]     
+            self.trialMLPx = mLPosi[(videoLog.time > self.startTime) & (videoLog.time < self.endTime)]     
+            self.trialMLCm = self.trialMLToCm()
             # adjust the startTimeWS
             self.startTimeWS = self.startTime - log.time[log.event=="start"].values[0]
-            
-            
+               
+        
         #####################################
         ## duration, start and end indices ##
         #####################################
@@ -286,22 +344,38 @@ class Trial:
         #######################################
         # location of the lever box and lever #
         #######################################
-        self.leverPosition = {"leverX" : np.nanmedian(self.trialML["leverX"]),
-                             "leverY" : np.nanmedian(self.trialML["leverY"]),
-                             "leverOri": np.nanmedian(self.trialML["leverOri"]),
-                             "leverPressX" : np.nanmedian(self.trialML["leverPressX"]),
-                             "leverPressY" : np.nanmedian(self.trialML["leverPressY"])}
-        self.lever = Lever()
-        lp = np.array((stats.mode(self.trialML["leverPressX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialML["leverPressY"].to_numpy().astype(int))[0].item()))
-        pl = np.array((stats.mode(self.trialML["leverBoxPLX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialML["leverBoxPLY"].to_numpy().astype(int))[0].item()))
-        pr = np.array((stats.mode(self.trialML["leverBoxPRX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialML["leverBoxPRY"].to_numpy().astype(int))[0].item()))
-        self.lever.calculatePose(lp = lp, pl = pl, pr = pr)
+        self.leverPositionPx = {"leverX" : np.nanmedian(self.trialMLPx["leverX"]),
+                             "leverY" : np.nanmedian(self.trialMLPx["leverY"]),
+                             "leverOri": np.nanmedian(self.trialMLPx["leverOri"]),
+                             "leverPressX" : np.nanmedian(self.trialMLPx["leverPressX"]),
+                             "leverPressY" : np.nanmedian(self.trialMLPx["leverPressY"])}
+        self.leverPositionCm = {"leverX" : np.nanmedian(self.trialMLCm["leverX"]),
+                             "leverY" : np.nanmedian(self.trialMLCm["leverY"]),
+                             "leverOri": np.nanmedian(self.trialMLCm["leverOri"]),
+                             "leverPressX" : np.nanmedian(self.trialMLCm["leverPressX"]),
+                             "leverPressY" : np.nanmedian(self.trialMLCm["leverPressY"])}
+        
+        
+        self.leverPx = Lever()
+        lp = np.array((stats.mode(self.trialMLPx["leverPressX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialMLPx["leverPressY"].to_numpy().astype(int))[0].item()))
+        pl = np.array((stats.mode(self.trialMLPx["leverBoxPLX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialMLPx["leverBoxPLY"].to_numpy().astype(int))[0].item()))
+        pr = np.array((stats.mode(self.trialMLPx["leverBoxPRX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialMLPx["leverBoxPRY"].to_numpy().astype(int))[0].item()))
+        self.leverPx.calculatePose(lp = lp, pl = pl, pr = pr)
+        
+        self.leverCm = Lever()
+        lp = np.array((stats.mode(self.trialMLCm["leverPressX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialMLCm["leverPressY"].to_numpy().astype(int))[0].item()))
+        pl = np.array((stats.mode(self.trialMLCm["leverBoxPLX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialMLCm["leverBoxPLY"].to_numpy().astype(int))[0].item()))
+        pr = np.array((stats.mode(self.trialMLCm["leverBoxPRX"].to_numpy().astype(int))[0].item(), stats.mode(self.trialMLCm["leverBoxPRY"].to_numpy().astype(int))[0].item()))
+        self.leverCm.calculatePose(lp = lp, pl = pl, pr = pr)
+        
         
         ################################################
         # define arena periphery and lever proximity  ##
         ################################################
         # radius from the arena center that defines the periphery of the arena
-        self.radiusPeriphery = aCoord[2]*arenaRadiusProportionToPeri
+        self.radiusPeripheryCm = self.aCoordCm[2]*arenaRadiusProportionToPeri
+        self.radiusPeripheryPx = self.aCoordPx[2]*arenaRadiusProportionToPeri
+        
        
         
         #########################################
@@ -309,47 +383,56 @@ class Trial:
         #########################################
         
         # np.array, used later on to know if at the lever
-        mousePoints = np.stack((self.trialML.mouseX.to_numpy(),self.trialML.mouseY.to_numpy()),axis=1)
+        mousePoints = np.stack((self.trialMLCm.mouseX.to_numpy(),self.trialMLCm.mouseY.to_numpy()),axis=1)
         
         
         # we will store all these Series in a DataFrame called pathDF
-        distance = np.sqrt(np.diff(self.trialML.mouseX,prepend=np.NAN)**2+
-                                np.diff(self.trialML.mouseY,prepend=np.NAN)**2)
+        distance = np.sqrt(np.diff(self.trialMLCm.mouseX,prepend=np.NAN)**2+
+                                np.diff(self.trialMLCm.mouseY,prepend=np.NAN)**2)
         traveledDistance = np.nancumsum(distance) # cumsum
         self.traveledDistance = np.nansum(distance) # sum
         videoFrameTimeDifference = self.trialVideoLog.time.diff().to_numpy()
         speed = distance/videoFrameTimeDifference
         speedNoNAN = np.nan_to_num(speed) # replace NAN with 0.0 to display in video
-        distanceFromArenaCenter = np.sqrt((self.trialML.mouseX.to_numpy() - self.aCoord[0])**2+ 
-                                               (self.trialML.mouseY.to_numpy() - self.aCoord[1])**2)
+        distanceFromArenaCenter = np.sqrt((self.trialMLCm.mouseX.to_numpy() - self.aCoordCm[0])**2+ 
+                                               (self.trialMLCm.mouseY.to_numpy() - self.aCoordCm[1])**2)
         ## distance from lever
-        distanceFromLeverPress = np.sqrt((self.trialML.leverPressX.to_numpy() - self.trialML.mouseX.to_numpy() )**2 + 
-                                        (self.trialML.leverPressY.to_numpy() - self.trialML.mouseY.to_numpy())**2)
-        distanceFromLever = np.sqrt((self.trialML.leverX.to_numpy() - self.trialML.mouseX.to_numpy() )**2 + 
-                                        (self.trialML.leverY.to_numpy() - self.trialML.mouseY.to_numpy())**2)
+        distanceFromLeverPress = np.sqrt((self.trialMLCm.leverPressX.to_numpy() - self.trialMLCm.mouseX.to_numpy() )**2 + 
+                                        (self.trialMLCm.leverPressY.to_numpy() - self.trialMLCm.mouseY.to_numpy())**2)
+        distanceFromLever = np.sqrt((self.trialMLCm.leverX.to_numpy() - self.trialMLCm.mouseX.to_numpy() )**2 + 
+                                        (self.trialMLCm.leverY.to_numpy() - self.trialMLCm.mouseY.to_numpy())**2)
         
         ## movement heading of the mouse relative to [1,0]
-        mv = np.stack((np.diff(self.trialML.mouseX,prepend=np.NAN),
-                       np.diff(self.trialML.mouseY,prepend=np.NAN)),axis=1)
+        mv = np.stack((np.diff(self.trialMLCm.mouseX,prepend=np.NAN),
+                       np.diff(self.trialMLCm.mouseY,prepend=np.NAN)),axis=1)
         mvHeading = self.vectorAngle(mv,degrees=True,quadrant=True)
         ## vector from mouse to bridge
-        mBVX = self.bCoordMiddle[0] - self.trialML.mouseX.to_numpy() 
-        mBVY = self.bCoordMiddle[1] - self.trialML.mouseY.to_numpy()   
-        mouseToBridge = np.stack((mBVX,mBVY),axis = 1)
+        mBVXCm = self.bCoordMiddleCm[0] - self.trialMLCm.mouseX.to_numpy() 
+        mBVYCm = self.bCoordMiddleCm[1] - self.trialMLCm.mouseY.to_numpy()   
+        mouseToBridgeCm = np.stack((mBVXCm,mBVYCm),axis = 1)
+        
+        mBVXPx = self.bCoordMiddlePx[0] - self.trialMLPx.mouseX.to_numpy() 
+        mBVYPx = self.bCoordMiddlePx[1] - self.trialMLPx.mouseY.to_numpy()   
+        mouseToBridgePx = np.stack((mBVXPx,mBVYPx),axis = 1)
+        
+        
+        
        
         ## angle between movement heading and vector from the mouse to the bridge
-        mvHeadingToBridgeAngle = self.vectorAngle(mv,mouseToBridge,degrees=True)
+        mvHeadingToBridgeAngle = self.vectorAngle(mv,mouseToBridgeCm,degrees=True)
         ## angle between head direction and vector from the mouse to the bridge
-        hdv = np.stack((self.trialML.mouseXHeading.to_numpy(),
-                       self.trialML.mouseYHeading.to_numpy()),axis = 1)
-        hdToBridgeAngle = self.vectorAngle(hdv,mouseToBridge,degrees=True)
+        hdv = np.stack((self.trialMLCm.mouseXHeading.to_numpy(),
+                       self.trialMLCm.mouseYHeading.to_numpy()),axis = 1)
+        hdToBridgeAngle = self.vectorAngle(hdv,mouseToBridgeCm,degrees=True)
         # Store these Series into a data frame
-        # use the same index as the self.trialML DataFrame
+        # use the same index as the self.trialMLPx DataFrame
         self.pathDF = pd.DataFrame({"distance" :distance,
                                   "traveledDistance" : traveledDistance,
                                   "mvHeading" : mvHeading,
-                                  "mouseToBridgeX": mBVX,
-                                  "mouseToBridgeY": mBVY,
+                                  "mouseToBridgeXCm": mBVXCm,
+                                  "mouseToBridgeYCm": mBVYCm,
+                                    "mouseToBridgeXPx": mBVXPx,
+                                    "mouseToBridgeYPx": mBVYPx,
                                   "mvHeadingToBridgeAngle" : mvHeadingToBridgeAngle,
                                   "hdToBridgeAngle" : hdToBridgeAngle,
                                   "speed" : speed,
@@ -357,7 +440,7 @@ class Trial:
                                   "distanceFromArenaCenter" : distanceFromArenaCenter,
                                   "distanceFromLever" : distanceFromLever,
                                   "distanceFromLeverPress": distanceFromLeverPress},
-                                  index = self.trialML.index)         
+                                  index = self.trialMLPx.index)         
        
         ######################
         # get lever presses ##
@@ -380,14 +463,14 @@ class Trial:
         ## sectioning the trial into different states  ##
         #################################################
         # define each frame as arena, bridge, lever or home base (NAN), one-hot encoding
-        self.stateDF=pd.DataFrame({"lever": self.lever.isAt(mousePoints) ,
-                                   "arenaCenter": self.pathDF.distanceFromArenaCenter<self.radiusPeriphery,
-                                   "arena": self.pathDF.distanceFromArenaCenter<self.aCoord[2],
-                                   "bridge": ((self.trialML.mouseX > self.bCoord[0,0]) & 
-                                              (self.trialML.mouseX < self.bCoord[2,0]) & 
-                                              (self.trialML.mouseY > self.bCoord[0,1]) & 
-                                              (self.trialML.mouseY < self.bCoord[2,1])),
-                                   "homeBase": pd.isna(self.trialML.mouseX)})
+        self.stateDF=pd.DataFrame({"lever": self.leverCm.isAt(mousePoints) ,
+                                   "arenaCenter": self.pathDF.distanceFromArenaCenter<self.radiusPeripheryCm,
+                                   "arena": self.pathDF.distanceFromArenaCenter<self.aCoordCm[2],
+                                   "bridge": ((self.trialMLCm.mouseX > self.bCoordCm[0,0]) & 
+                                              (self.trialMLCm.mouseX < self.bCoordCm[2,0]) & 
+                                              (self.trialMLCm.mouseY > self.bCoordCm[0,1]) & 
+                                              (self.trialMLCm.mouseY < self.bCoordCm[2,1])),
+                                   "homeBase": pd.isna(self.trialMLCm.mouseX)})
         # if all false, the mouse is not on arena or bridge
         # most likely between the arena and bridge, or poking it over the edge of the arena
         self.stateDF.insert(0, "gap", self.stateDF.sum(1)==0) 
@@ -443,24 +526,26 @@ class Trial:
             #################################################
             for i in range(self.leverPress.videoIndex.iloc[0],
                            self.trialVideoLog.frame_number.iloc[-1]) :
-                if (self.pathDF.distanceFromArenaCenter[i] > self.radiusPeriphery):
+                if (self.pathDF.distanceFromArenaCenter[i] > self.radiusPeripheryCm):
                     self.peripheryAfterFirstLeverPressVideoIndex = i
                     break
 
             #####################################################################
             ## moue coordinate when reaching periphery after first lever press ##
             #####################################################################
-            self.peripheryAfterFirstLeverPressCoord = np.array([self.trialML.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseX"],
-                                                                self.trialML.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseY"]])
+            self.peripheryAfterFirstLeverPressCoordCm = np.array([self.trialMLCm.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseX"],
+                                                                self.trialMLCm.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseY"]])
+            self.peripheryAfterFirstLeverPressCoordPx = np.array([self.trialMLPx.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseX"],
+                                                                self.trialMLPx.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseY"]])
 
             #################################
             # Reaching periphery analysis  ##
             #################################
             ## angle of the bridge center relative to arena center 
-            arenaToBridgeVector= self.bCoordMiddle - self.aCoord[:2]
+            arenaToBridgeVector= self.bCoordMiddleCm - self.aCoordCm[:2]
             self.arenaToBridgeAngle = self.vectorAngle(np.expand_dims(arenaToBridgeVector,0),degrees=True)
             ## angle from mouse when reaching periphery relative to arena center
-            arenaToMousePeriVector = self.peripheryAfterFirstLeverPressCoord-self.aCoord[:2]
+            arenaToMousePeriVector = self.peripheryAfterFirstLeverPressCoordCm-self.aCoordCm[:2]
             self.arenaToMousePeriAngle = self.vectorAngle(np.expand_dims(arenaToMousePeriVector,0),degrees=True)
             ## angular deviation of the mouse when reaching periphery
             self.periArenaCenterBridgeAngle=self.vectorAngle(v = np.expand_dims(arenaToMousePeriVector,0),
@@ -565,33 +650,33 @@ class Trial:
         """
         Create a numpy array containing the pose (x, y, z, yaw, pitch, roll, time) during a defined time period
         Arguments:
-            startIndex: start index of the path, index are from the self.trialML or self.trialVideoLog (they are the same)
+            startIndex: start index of the path, index are from the self.trialMLCm or self.trialVideoLog (they are the same)
             endIndex: end index of the path
 
         Return Pose as a numpy array with 7 columns
 
         """
-        return np.stack((self.trialML.loc[startIndex:endIndex,"mouseX"].to_numpy(),
-                    self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy(),
-                    np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
-                    self.trialML.loc[startIndex:endIndex,"mouseOri"].to_numpy(),
-                    np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
-                    np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
+        return np.stack((self.trialMLCm.loc[startIndex:endIndex,"mouseX"].to_numpy(),
+                    self.trialMLCm.loc[startIndex:endIndex,"mouseY"].to_numpy(),
+                    np.zeros_like(self.trialMLCm.loc[startIndex:endIndex,"mouseY"].to_numpy()),
+                    self.trialMLCm.loc[startIndex:endIndex,"mouseOri"].to_numpy(),
+                    np.zeros_like(self.trialMLCm.loc[startIndex:endIndex,"mouseY"].to_numpy()),
+                    np.zeros_like(self.trialMLCm.loc[startIndex:endIndex,"mouseY"].to_numpy()),
                     self.trialVideoLog.timeWS.loc[startIndex:endIndex].to_numpy()),axis=1)
     def poseFromLeverPositionDictionary(self) :
         """
         Create a numpy array containing the pose (x, y, z, yaw, pitch, roll, time)  
         from the leverPosition dictionary.
         """
-        return np.array([[self.leverPosition["leverX"],self.leverPosition["leverY"],0,
-                          self.leverPosition["leverOri"],0,0,0]])
+        return np.array([[self.leverPositionCm["leverX"],self.leverPositionCm["leverY"],0,
+                          self.leverPositionCm["leverOri"],0,0,0]])
 
     def poseFromBridgeCoordinates(self) :
         """
         Create a numpy array containing the pose (x, y, z, yaw, pitch, roll, time)  
         from the middle of the bridge
         """
-        return np.array([[self.bCoordMiddle[0],self.bCoordMiddle[1],0,0,0,0,0]])
+        return np.array([[self.bCoordMiddleCm[0],self.bCoordMiddleCm[1],0,0,0,0,0]])
     
     def videoIndexFromTimeStamp(self, timeStamp):
         """
@@ -620,9 +705,6 @@ class Trial:
             print("startVideoIndex {} or endVideoIndex {} is out of possible range for the number of frames in {} {}".format(self.startVideoIndex,self.endVideoIndex,pathVideoFile,nFrames))
             return
         
-        
-        
-
 
         ## mask to plot paths
         mask = np.full((inWidth, inHeight), 255, dtype=np.uint8) # to plot the path
@@ -681,7 +763,11 @@ class Trial:
     
     
     def decorateVideoFrame(self,frame,index,count,maskDict):
+        """
+        Function to add information to the trial video
+        For example, we can plot the path and other varialbes
         
+        """
         
         
         # cartesian coordinates
@@ -713,6 +799,7 @@ class Trial:
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (150,150,150), 1, cv2.LINE_AA)
         
+        
         ############################
         # first colum of variables #
         ############################
@@ -724,19 +811,19 @@ class Trial:
                             0.5, (100,200,0), 1, cv2.LINE_AA)
         # traveled distance
         frame = cv2.putText(frame, 
-                            "Distance: {:.1f} pxs".format(self.pathDF.traveledDistance[index]), 
+                            "Distance: {:.1f} cm".format(self.pathDF.traveledDistance[index]), 
                             (30,50), 
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (100,200,0), 1, cv2.LINE_AA)
         # speed
         frame = cv2.putText(frame, 
-                            "Speed: {:.0f} pxs/sec".format(self.pathDF.speedNoNAN[index]), 
+                            "Speed: {:.0f} cm/sec".format(self.pathDF.speedNoNAN[index]), 
                             (30,80), 
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (100,200,0), 1, cv2.LINE_AA)       
         # distance to lever
         frame = cv2.putText(frame, 
-                            "Distance lever: {:.1f} pxs".format(self.pathDF.distanceFromLever[index]), 
+                            "Distance lever center: {:.1f} cm".format(self.pathDF.distanceFromLever[index]), 
                             (30,110), 
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (100,200,0), 1, cv2.LINE_AA)       
@@ -749,14 +836,14 @@ class Trial:
         
         # Head direction of the mouse
         frame = cv2.putText(frame, 
-                            "HD: {:.0f} deg".format(self.trialML.mouseOri[index]), 
+                            "HD: {:.0f} deg".format(self.trialMLPx.mouseOri[index]), 
                             (30,170), 
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (100,200,0), 1, cv2.LINE_AA) 
         
         # mouse head to bridge vector
         frame = cv2.putText(frame, 
-                            "toBridge: {:.0f} {:.0f}".format(self.pathDF.mouseToBridgeX[index],self.pathDF.mouseToBridgeY[index]), 
+                            "toBridge: {:.0f} {:.0f}".format(self.pathDF.mouseToBridgeXCm[index],self.pathDF.mouseToBridgeYCm[index]), 
                             (30,200), 
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (100,200,0), 1, cv2.LINE_AA) 
@@ -776,7 +863,7 @@ class Trial:
                             0.5, (100,200,0), 1, cv2.LINE_AA) 
         # Lever orientation
         frame = cv2.putText(frame, 
-                            "lever ori : {:.0f} deg".format(self.trialML.leverOri[index]), 
+                            "lever ori : {:.0f} deg".format(self.trialMLPx.leverOri[index]), 
                             (30,290), 
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (100,200,0), 1, cv2.LINE_AA) 
@@ -837,37 +924,38 @@ class Trial:
         ### mask operations for the path ##
         ###################################
         # draw the path using a mask
-        if not np.isnan(self.trialML.loc[index,"mouseX"]) :
+        # because we are working in pixels and not cm, we are using self.trialMLPx instead of self.trialMLCm
+        if not np.isnan(self.trialMLPx.loc[index,"mouseX"]) :
             maskDict["mask"] = cv2.circle(maskDict["mask"],
-                                  (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                  (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                    radius=1, color=(0, 0, 0), thickness=1)
             
             if self.valid :
                 # draw the search path into the specific mask
                 if index >= self.searchTotalStartIndex and index <= self.searchTotalEndIndex:
                     maskDict["maskSearchTotal"] = cv2.circle(maskDict["maskSearchTotal"],
-                                              (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                              (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
                 if index >= self.searchArenaStartIndex and index <= self.searchArenaEndIndex:
                     maskDict["masksearchArena"] = cv2.circle(maskDict["masksearchArena"],
-                                              (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                              (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
                 if index >= self.searchArenaNoLeverStartIndex and index <= self.searchArenaNoLeverEndIndex:
                     maskDict["masksearchArenaNoLever"] = cv2.circle(maskDict["masksearchArenaNoLever"],
-                                              (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                              (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
 
                 if index >= self.homingTotalStartIndex and index <= self.homingTotalEndIndex:
                     maskDict["maskHomingTotal"] = cv2.circle(maskDict["maskHomingTotal"],
-                                              (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                              (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
                 if index >= self.homingPeriStartIndex and index <= self.homingPeriEndIndex:
                     maskDict["maskHomingPeri"] = cv2.circle(maskDict["maskHomingPeri"],
-                                              (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                              (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
                 if index >= self.homingPeriNoLeverStartIndex and index <= self.homingPeriNoLeverEndIndex:
                     maskDict["maskHomingPeriNoLever"] = cv2.circle(maskDict["maskHomingPeriNoLever"],
-                                              (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                                              (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
 
         
@@ -892,21 +980,21 @@ class Trial:
         # add mouse position and orientation ##
         #######################################
         # mouse orientaiton (head-direction) line
-        if ~np.isnan(self.trialML.loc[index,"mouseX"]):
+        if ~np.isnan(self.trialMLPx.loc[index,"mouseX"]):
             frame = cv2.line(frame,
-                             (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
-                             (int(self.trialML.loc[index,"mouseX"]+self.trialML.loc[index,"mouseXHeading"]*2),
-                              int(self.trialML.loc[index,"mouseY"]+self.trialML.loc[index,"mouseYHeading"]*2)),
+                             (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
+                             (int(self.trialMLPx.loc[index,"mouseX"]+self.trialMLPx.loc[index,"mouseXHeading"]*2),
+                              int(self.trialMLPx.loc[index,"mouseY"]+self.trialMLPx.loc[index,"mouseYHeading"]*2)),
                             (0,200,255),2)
             # mouse position dot
             frame = cv2.circle(frame,
-                               (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
+                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                     radius=4, color=(0, 200, 255), thickness=1)
             # head to bridge vector
             frame = cv2.line(frame,
-                             (int(self.trialML.loc[index,"mouseX"]),int(self.trialML.loc[index,"mouseY"])),
-                             (int(self.trialML.loc[index,"mouseX"]+self.pathDF.loc[index,"mouseToBridgeX"]),
-                              int(self.trialML.loc[index,"mouseY"]+self.pathDF.loc[index,"mouseToBridgeY"])),
+                             (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
+                             (int(self.trialMLPx.loc[index,"mouseX"]+self.pathDF.loc[index,"mouseToBridgeXPx"]),
+                              int(self.trialMLPx.loc[index,"mouseY"]+self.pathDF.loc[index,"mouseToBridgeYPx"])),
                             (100,255,255),2)
         
         
@@ -914,29 +1002,29 @@ class Trial:
         # add lever position and orientation ##
         #######################################
         # lever orientaiton line
-        if ~np.isnan(self.trialML.loc[index,"leverX"]) :
+        if ~np.isnan(self.trialMLPx.loc[index,"leverX"]) :
             frame = cv2.line(frame,
-                             (int(self.trialML.loc[index,"leverX"]),int(self.trialML.loc[index,"leverY"])),
-                             (int(self.trialML.loc[index,"leverX"]+self.trialML.loc[index,"leverXHeading"]*0.75),
-                              int(self.trialML.loc[index,"leverY"]+self.trialML.loc[index,"leverYHeading"]*0.75)),
+                             (int(self.trialMLPx.loc[index,"leverX"]),int(self.trialMLPx.loc[index,"leverY"])),
+                             (int(self.trialMLPx.loc[index,"leverX"]+self.trialMLPx.loc[index,"leverXHeading"]*0.75),
+                              int(self.trialMLPx.loc[index,"leverY"]+self.trialMLPx.loc[index,"leverYHeading"]*0.75)),
                             (0,0,255),2)
             # lever position dot
             frame = cv2.circle(frame,
-                               (int(self.trialML.loc[index,"leverX"]),int(self.trialML.loc[index,"leverY"])),
+                               (int(self.trialMLPx.loc[index,"leverX"]),int(self.trialMLPx.loc[index,"leverY"])),
                                 radius=2, color=(0, 0, 255), thickness=2)
             # leverPress position dot
             frame = cv2.circle(frame,
-                               (int(self.trialML.loc[index,"leverPressX"]),int(self.trialML.loc[index,"leverPressY"])),
+                               (int(self.trialMLPx.loc[index,"leverPressX"]),int(self.trialMLPx.loc[index,"leverPressY"])),
                                 radius=2, color=(0, 0, 255), thickness=2)
             # left corner 
             frame = cv2.circle(frame,
-                                (int(self.trialML.loc[index,"leverBoxPLX"]),
-                                 int(self.trialML.loc[index,"leverBoxPLY"])),
+                                (int(self.trialMLPx.loc[index,"leverBoxPLX"]),
+                                 int(self.trialMLPx.loc[index,"leverBoxPLY"])),
                                 radius=4, color=(150, 255, 0), thickness=1)
             # right corner
             frame = cv2.circle(frame,
-                                (int(self.trialML.loc[index,"leverBoxPRX"]),
-                                 int(self.trialML.loc[index,"leverBoxPRY"])),
+                                (int(self.trialMLPx.loc[index,"leverBoxPRX"]),
+                                 int(self.trialMLPx.loc[index,"leverBoxPRY"])),
                                 radius=4, color=(0, 255, 150), thickness=2)
             
             
@@ -946,10 +1034,10 @@ class Trial:
         
         
         # add lever presses as red dots at the center of the lever
-        if (self.leverPress.videoIndex==index).sum() == 1 and ~np.isnan(self.trialML.loc[index,"leverX"]) :
+        if (self.leverPress.videoIndex==index).sum() == 1 and ~np.isnan(self.trialMLPx.loc[index,"leverX"]) :
              frame = cv2.circle(frame,
-                                (int(self.trialML.loc[index,"leverX"]),
-                                 int(self.trialML.loc[index,"leverY"])),
+                                (int(self.trialMLPx.loc[index,"leverX"]),
+                                 int(self.trialMLPx.loc[index,"leverY"])),
                                 radius=4, color=(0, 255, 0), thickness=3)
             
             
@@ -961,48 +1049,48 @@ class Trial:
             if index > self.peripheryAfterFirstLeverPressVideoIndex :
                 # mouse position dot
                 frame = cv2.circle(frame,
-                                   (int(self.peripheryAfterFirstLeverPressCoord[0]),
-                                    int(self.peripheryAfterFirstLeverPressCoord[1])),
+                                   (int(self.peripheryAfterFirstLeverPressCoordPx[0]),
+                                    int(self.peripheryAfterFirstLeverPressCoordPx[1])),
                                         radius=4, color=(255, 100, 0), thickness=4)
          
         ## Draw the bridge
         for i in range(3):
             frame = cv2.line(frame,
-                        (int(self.bCoord[i,0]),int(self.bCoord[i,1])),
-                        (int(self.bCoord[i+1,0]),int(self.bCoord[i+1,1])),
+                        (int(self.bCoordPx[i,0]),int(self.bCoordPx[i,1])),
+                        (int(self.bCoordPx[i+1,0]),int(self.bCoordPx[i+1,1])),
                             (200,200,200),1)
         frame = cv2.line(frame,
-                        (int(self.bCoord[3,0]),int(self.bCoord[3,1])),
-                        (int(self.bCoord[0,0]),int(self.bCoord[0,1])),
+                        (int(self.bCoordPx[3,0]),int(self.bCoordPx[3,1])),
+                        (int(self.bCoordPx[0,0]),int(self.bCoordPx[0,1])),
                             (200,200,200),1)
         
         ## Draw the periphery
         frame = cv2.circle(frame,
-                                (int(self.aCoord[0]),int(self.aCoord[1])),
-                                radius=int(self.radiusPeriphery), color=(50, 50, 50), thickness=1)
+                                (int(self.aCoordPx[0]),int(self.aCoordPx[1])),
+                                radius=int(self.radiusPeripheryPx), color=(50, 50, 50), thickness=1)
                 
         ## Draw the lever, 
-        for i in range(len(self.lever.points[:,0])-1):
+        for i in range(len(self.leverPx.points[:,0])-1):
             frame = cv2.line(frame,
-                            (int(self.lever.points[i,0]),int(self.lever.points[i,1])),
-                            (int(self.lever.points[i+1,0]),int(self.lever.points[i+1,1])),
+                            (int(self.leverPx.points[i,0]),int(self.leverPx.points[i,1])),
+                            (int(self.leverPx.points[i+1,0]),int(self.leverPx.points[i+1,1])),
                             (200,200,200),1)
         # final lever segment
         frame = cv2.line(frame,
-                            (int(self.lever.points[len(self.lever.points[:,0])-1,0]),int(self.lever.points[len(self.lever.points[:,0])-1,1])),
-                            (int(self.lever.points[0,0]),int(self.lever.points[0,1])),
+                            (int(self.leverPx.points[len(self.leverPx.points[:,0])-1,0]),int(self.leverPx.points[len(self.leverPx.points[:,0])-1,1])),
+                            (int(self.leverPx.points[0,0]),int(self.leverPx.points[0,1])),
                             (200,200,200),1)
         
         ## Draw the lever area
-        for i in range(len(self.lever.zonePoints[:,0])-1):
+        for i in range(len(self.leverPx.zonePoints[:,0])-1):
             frame = cv2.line(frame,
-                            (int(self.lever.zonePoints[i,0]),int(self.lever.zonePoints[i,1])),
-                            (int(self.lever.zonePoints[i+1,0]),int(self.lever.zonePoints[i+1,1])),
+                            (int(self.leverPx.zonePoints[i,0]),int(self.leverPx.zonePoints[i,1])),
+                            (int(self.leverPx.zonePoints[i+1,0]),int(self.leverPx.zonePoints[i+1,1])),
                             (200,200,200),2)
         # final lever segment
         frame = cv2.line(frame,
-                            (int(self.lever.zonePoints[len(self.lever.zonePoints[:,0])-1,0]),int(self.lever.zonePoints[len(self.lever.zonePoints[:,0])-1,1])),
-                            (int(self.lever.zonePoints[0,0]),int(self.lever.zonePoints[0,1])),
+                            (int(self.leverPx.zonePoints[len(self.leverPx.zonePoints[:,0])-1,0]),int(self.leverPx.zonePoints[len(self.leverPx.zonePoints[:,0])-1,1])),
+                            (int(self.leverPx.zonePoints[0,0]),int(self.leverPx.zonePoints[0,1])),
                             (200,200,200),2)
         
         
