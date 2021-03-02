@@ -12,6 +12,7 @@ class Session:
     Attributes:
         name: Name of the session. Usually used as the beginning of the file names
         path: Directory path of the data for this session
+        subject: Name of the subect. This assumes that the session name is in the format subject-data-time
         fileBase: path + name
         arenaTopVideo: Boolean indicating whether we should expect a video for the arnea
         homeBaseVideo:  Boolean indicating whether we should have a video of the home base
@@ -33,6 +34,7 @@ class Session:
     def __init__(self,name,path,arenaTopVideo=True,homeBaseVideo=True, dataFileCheck=True):
         self.name = name
         self.path = path
+        self.subject = self.name.split("-")[0]
         self.fileBase = path+"/"+name
         self.arenaTopVideo = arenaTopVideo
         self.homeBaseVideo = homeBaseVideo
@@ -291,9 +293,12 @@ class Session:
         """
         Get a DatatFrame with the variables of each trial, one row per trial
         
+        We will add the subject name the the data frame as it is useful when analysing data at the project level.
+        
         """
         dfList = [trial.getTrialVariables() for trial in self.trialList]
         self.trialVariables = pd.concat(dfList)
+        self.trialVariables["subject"]=self.subject # add the subject name to the dataframe
         
     def createTrialVideos(self):
         """

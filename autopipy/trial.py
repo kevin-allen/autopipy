@@ -10,7 +10,7 @@ from autopipy.lever import Lever
 
 class Trial:
     """
-    Class containing information about an autopi trial
+    Class containing information about a single trial on the Autopi task.
     
     When calculating angles, the y coordinate is reversed (0-y) so that 90 degree is up.
     This is done because the y-axis is reversed in the videos.
@@ -82,11 +82,18 @@ class Trial:
         self.pathDF = None # DataFrame, instantaneous variable evolving during the trial (e.g., distance run)
         self.leverPress = None # DataFrame with Ros time and video index of lever presses
         self.nLeverPresses = None 
-        self.peripheryAfterFirstLeverPressCoordCm = None
-        self.peripheryAfterFirstLeverPressCoordPx = None
+        self.nJourneys = None
+        self.journeyTransitionIndices = None
+        self.journeyStartEndIndices = None
+        self.journeysAtLever = None
+        self.journeysWithPress = None  
+        self.peripheryAfterFirstLeverPressCoordCm = [None,None]
+        self.peripheryAfterFirstLeverPressCoordPx = [None,None]
+        self.peripheryAfterFirstLeverPressAngle = None
         self.arenaToBridgeAngle = None
         self.arenaToMousePeriAngle = None
         self.stateDF = None # DataFrame with the categorical position of the mouse (Bridge, Arena, ArenaCenter, Lever, Gap)
+        self.stateTime = None # Dictionary containing the time spent at the different locations (Bridge, Arena, ArenaCenter, Lever, Gap)
         ## start and end indices of paths
         self.searchTotalStartIndex = None
         self.searchTotalEndIndex = None
@@ -101,8 +108,7 @@ class Trial:
         self.homingPeriNoLeverStartIndex = None
         self.homingPeriNoLeverEndIndex = None
         self.peripheryAfterFirstLeverPressVideoIndex = None
-        self.journeyTransitionIndices = None
-        self.nJourneys = None
+      
         ## NavPath objects
         self.searchTotalNavPath = None
         self.searchArenaNavPath = None
@@ -133,8 +139,23 @@ class Trial:
                        "leverPressY": [self.leverPositionCm["leverPressY"]],
                        "nLeverPresses" : [self.nLeverPresses],
                        "nJourneys" : [self.nJourneys],
+                       "nJourneysAtLever" : [np.sum(self.journeysAtLever)],
+                       "nJourneysWithPress" : [np.sum(self.journeysWithPress)],
                        "travelledDistance" : [self.traveledDistance],
+                       "peripheryAfterFirstLeverPressX" : [self.peripheryAfterFirstLeverPressCoordCm[0]],
+                       "peripheryAfterFirstLeverPressY" : [self.peripheryAfterFirstLeverPressCoordCm[1]],
+                       "peripheryAfterFirstLeverPressAngle" : [self.peripheryAfterFirstLeverPressAngle],
                        "anglularErrorHomingPeri" : self.periArenaCenterBridgeAngle,
+                      
+                      
+                       # total time at different locations
+                       "timeBridge" : self.stateTime["bridge"],
+                       "timeArenaCenter" : self.stateTime["arenaCenter"],
+                       "timeArena" : self.stateTime["arena"],
+                       "timePeriphery" : self.stateTime["arena"]-self.stateTime["arenaCenter"],
+                       "timeHomeBase" : self.stateTime["homeBase"],
+                       "timeLever" : self.stateTime["lever"],
+                       
                        # for searchTotal path 
                        "searchTotal_length" : [self.searchTotalNavPath.length],
                        "searchTotal_duration" : [self.searchTotalNavPath.duration],
@@ -476,14 +497,45 @@ class Trial:
         self.stateDF.insert(0, "gap", self.stateDF.sum(1)==0) 
         # get the one-hot encoding back into categorical, when several true, the first column is return.
         self.stateDF["loca"] = self.stateDF.iloc[:, :].idxmax(1)
-         
+        self.stateTime = {"gap" : videoFrameTimeDifference[self.stateDF.gap].sum(),
+                          "lever" : videoFrameTimeDifference[self.stateDF.lever].sum(),
+                         "arenaCenter" : videoFrameTimeDifference[self.stateDF.arenaCenter].sum(),
+                         "arena" : videoFrameTimeDifference[self.stateDF.arena].sum(),
+                         "bridge" : videoFrameTimeDifference[self.stateDF.bridge].sum(),
+                         "homeBase" : videoFrameTimeDifference[self.stateDF.homeBase].sum()}
+        
         ######################################################################
         ## number of journeys on the arena (from the bridge to arena center)##
         ######################################################################
         bridgeArenaCenter = self.stateDF[ (self.stateDF.loca=="bridge") | (self.stateDF.loca=="arenaCenter") ]
         df = pd.DataFrame({"start" : bridgeArenaCenter.shift().loca,"end" : bridgeArenaCenter.loca})
-        self.journeyTransitionIndices = df[(df.start=="bridge") & (df.end=="arenaCenter")].index.values
+        self.journeyTransitionIndices = df[(df.start=="bridge") & (df.end=="arenaCenter")].index.values - 1 # - 1 because of the shift
         self.nJourneys=len(self.journeyTransitionIndices)
+        
+        # check if the mouse found the lever and press it for each journey
+        if len(self.journeyTransitionIndices) > 0:
+            jt = np.append(self.journeyTransitionIndices,self.endVideoIndex) # get index for end of last journey
+
+            # dataframe with start and end indices for each journey
+            self.journeyStartEndIndices = pd.DataFrame({"start" : jt[0:-1], "end" : jt[1:]-1})
+            # check if mouse found the lever
+            def atLever(x):
+                return any(self.stateDF.loc[x.start:x.end,"loca"]=="lever")
+            self.journeysAtLever=self.journeyStartEndIndices.apply(atLever,  axis=1)
+            
+            # check if there was a lever press for each journey
+            def jLeverPressed(x):
+                return np.sum((self.leverPress.videoIndex > x.start) & (self.leverPress.videoIndex < x.end))>0
+            self.journeysWithPress=self.journeyStartEndIndices.apply(jLeverPressed,  axis=1)
+            
+            
+            
+        
+        
+        
+        
+        
+        
         
         ####################################################################
         ### If the lever is not detected correctly, it is possible that ####
@@ -537,7 +589,7 @@ class Trial:
                                                                 self.trialMLCm.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseY"]])
             self.peripheryAfterFirstLeverPressCoordPx = np.array([self.trialMLPx.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseX"],
                                                                 self.trialMLPx.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseY"]])
-
+            self.peripheryAfterFirstLeverPressAngle = np.asscalar(self.vectorAngle(v = np.expand_dims(self.peripheryAfterFirstLeverPressCoordCm,axis=0),degrees=True,quadrant=True)[0])
             #################################
             # Reaching periphery analysis  ##
             #################################
@@ -895,11 +947,22 @@ class Trial:
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (100,200,0), 1, cv2.LINE_AA)
         # journey (from bridge to arenaCenter)
-        frame = cv2.putText(frame, 
-                            "Journey {} of {}".format(np.sum(index>self.journeyTransitionIndices),self.nJourneys), 
-                            (frame.shape[1]-200,80), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA)
+        if(np.sum(index>self.journeyTransitionIndices)>0):
+            frame = cv2.putText(frame, 
+                                "Journey {}/{}, l:{}, p:{}".format(np.sum(index>self.journeyTransitionIndices),self.nJourneys,
+                                                                                   int(self.journeysAtLever.iloc[np.sum(self.journeyTransitionIndices<index)-1]),
+                                                                                   int(self.journeysWithPress.iloc[np.sum(self.journeyTransitionIndices<index)-1])
+                                                                                  ), 
+                                (frame.shape[1]-200,80), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA)
+        else:
+            frame = cv2.putText(frame, 
+                                "{} journeys".format(self.nJourneys), 
+                                (frame.shape[1]-200,80), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA)
+
         # lever presses
         if self.nLeverPresses > 0 :
             frame = cv2.putText(frame, 
