@@ -281,6 +281,7 @@ class Session:
         """
         self.segmentTrialsFromLog() # get the beginning and end of trials
         self.createTrialList() # create a List of trial object
+        self.testVideoLogSynchronization()
         self.loadLogFile()
         self.loadPositionTrackingData()
         for trial in self.trialList:
@@ -324,7 +325,7 @@ class Session:
     
     def trialPathFigure(self,fileName=None,arenaRadius = 40,arenaRadiusProportionToPeri=0.925):
         """
-        Create a figure with the trial paths.
+        Create a figure with the trial paths. All of the trials
         
         It is a great way to double-check that the trial analysis when as expected.
         

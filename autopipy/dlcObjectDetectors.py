@@ -669,7 +669,7 @@ class BridgeDetector(Dlc):
         fps = int (cap.get(cv2.CAP_PROP_FPS))
         width = int (cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int (cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
+        
         out = cv2.VideoWriter(pathTmpVideo, cv2.VideoWriter_fourcc(*'MJPG'), fps, (width,height)) 
 
         while cap.isOpened() and count < numFrames + skip: 

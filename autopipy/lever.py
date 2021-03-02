@@ -20,7 +20,7 @@ class Lever:
         
     """
     def __init__(self):
-        self.scallingFactorLarge=1.6
+        self.scallingFactorLarge=1.65 # scaling factor to define the lever zone
         self.scallingFactorSideWalls = 0.8 # length of the side walls relative to the long axis (posterior middle point to lever press)
         
     def isAt(self,points):
@@ -116,9 +116,12 @@ class Lever:
         # We can align with the lever press 
         self.points = self.points  + (lp-p3)
         
+        self.pointsPlot = np.append(self.points,self.points[0,:]).reshape((-1,2))
+        
         # Align with the lever press, then move 
         self.zonePoints = self.zonePoints + (lp-p3) - (vLong*(self.scallingFactorLarge-1))/2
         
+        self.zonePointsPlot = np.append(self.zonePoints,self.zonePoints[0,:]).reshape((-1,2))
         
         self.leverPath = mpltPath.Path(self.points)
         self.leverZonePath = mpltPath.Path(self.zonePoints)

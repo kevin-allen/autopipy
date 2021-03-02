@@ -7,6 +7,7 @@ import cv2
 import sys
 from autopipy.navPath import NavPath
 from autopipy.lever import Lever
+import matplotlib.pyplot as plt
 
 class Trial:
     """
@@ -234,7 +235,7 @@ class Trial:
 
     
     
-    def extractTrialFeatures(self,log,mLPosi,videoLog,aCoord,bCoord,
+    def extractTrialFeatures(self,log=None,mLPosi=None,videoLog=None,aCoord=None,bCoord=None,
                              arenaRadiusProportionToPeri=0.925, printName = False, arenaRadiusCm=40):
         """
         Extract trial features
@@ -251,7 +252,15 @@ class Trial:
             printName: Boolean indicating whether to print the trial name
             
         """
-        
+        if log is None:
+            raise TypeError("log is None")
+        if mLPosi is None:
+            raise TypeError("mLPosi is None")
+        if aCoord is None:
+            raise TypeError("aCoord is None")
+        if bCoord is None:
+            raise TypeError("bCoord is None")
+           
         
         ##############################################
         ### get data to transform from pixels to cm ##
@@ -260,7 +269,7 @@ class Trial:
         self.pxPerCm = aCoord[2]/self.arenaRadiusCm # to go from pixels to cm
         self.originPxToCm = aCoord[:2] # the 0,0 in the cm world     
         #print("A radius cm: {}, A radius px:{}, pxPerCm: {}, originPxToCm: {}".format(self.arenaRadiusCm,aCoord[2],self.pxPerCm, self.originPxToCm))
-         
+        self.arenaRadiusProportionToPeri = arenaRadiusProportionToPeri
         #######################################
         ## arena and bridge coordinates in cm##
         #######################################  
@@ -469,9 +478,9 @@ class Trial:
         lever = log[ (log.event=="lever_press") | (log.event == "leverPress")]
         index = (lever.time>self.startTime) & (lever.time<self.endTime) # boolean array
         leverPressTime = lever.time[index] # ROS time of lever
-        leverPressVideoIndex = leverPressTime.apply(self.videoIndexFromTimeStamp) # video index
+        self.leverPressVideoIndex = leverPressTime.apply(self.videoIndexFromTimeStamp) # video index
         self.leverPress = pd.DataFrame({"time": leverPressTime,
-                                        "videoIndex":leverPressVideoIndex})
+                                        "videoIndex":self.leverPressVideoIndex})
         self.nLeverPresses = len(self.leverPress.time)
         if self.nLeverPresses == 0:
             print("{}, no lever press".format(self.name))
@@ -1220,6 +1229,30 @@ class Trial:
         else:
             return lightEvents.param[lightEvents.time< self.startTime].tail(1).to_numpy()[0]
 
+    def trialPathFigure(self):
+        # to plot the arena circle
+        arena=np.arange(start=0,stop=2*np.pi,step=0.02)
+        
+        
+        fig, axes = plt.subplots(1,1,figsize=(3,3))
+        plt.subplots_adjust(wspace=0.3,hspace=0.3)
+
+        # what needs to be applied to all graphs
+        axes.set_aspect('equal', adjustable='box')
+        axes.plot(np.cos(arena)*self.arenaRadiusCm,np.sin(arena)*self.arenaRadiusCm,label="Arena",color="gray")
+        axes.plot(np.cos(arena)*self.arenaRadiusCm*self.arenaRadiusProportionToPeri,
+                     np.sin(arena)*self.arenaRadiusCm*self.arenaRadiusProportionToPeri,label="Periphery",color="gray",linestyle='dashed')
+        axes.set_xlabel("cm")
+        axes.set_ylabel("cm")
+        ## mouse path
+        axes.plot(self.trialMLCm.mouseX,self.trialMLCm.mouseY)
+        ## lever
+        axes.plot(self.leverCm.pointsPlot[:,0],self.leverCm.pointsPlot[:,1])
+        axes.plot(self.leverCm.zonePointsPlot[:,0],self.leverCm.zonePointsPlot[:,1])
+        ## mouse position at lever presses
+        if self.nLeverPresses > 0:
+            axes.scatter(self.trialMLCm.mouseX[self.leverPressVideoIndex],
+                         self.trialMLCm.mouseY[self.leverPressVideoIndex])
         
     
     def __str__(self):

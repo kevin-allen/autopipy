@@ -10,6 +10,25 @@ from autopipy.dlcObjectDetectors import MouseLeverDetector
 from autopipy.dlcObjectDetectors import MouseLeverDetector
 from datetime import datetime
 
+def cutVideo(inputVideoFile, outputVideoFile ,startFrame=0,endFrame=10):
+    
+    cap = cv2.VideoCapture(inputVideoFile)
+    fps = int (cap.get(cv2.CAP_PROP_FPS))
+    inWidth = int (cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    inHeight = int (cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    nFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    out = cv2.VideoWriter(outputVideoFile, cv2.VideoWriter_fourcc(*'MJPG'), fps, (inWidth,inHeight)) 
+    cap.set(2, startFrame) 
+    numFrames = endFrame-startFrame
+    count = 0
+    while cap.isOpened() and count < numFrames:
+            ret, frame = cap.read()
+            out.write(frame)
+            count+=1
+    cap.release() 
+    out.release()
+
+
 def maskCropVideoToBridgeArena(pathVideoFile, pathOutputFile, arenaCoordinates, bridgeCoordinates, outWidth=480, outHeight=480, arenaRadiusFactor=1.125, bridgeWidthFactor=1.5):
     """
     Function that applies a mask and crop operation to a video 
