@@ -62,6 +62,19 @@ class Project:
         else :
             self.sessionList =  [ Session(name = sessionName, path = self.sessionPathFromSessionName(sessionName),dataFileCheck=False, arenaTopVideo=False,homeBaseVideo=False) for sessionName in sessionNameList]
     
+    def getSession(self, sessionName):
+        """
+        Return a session from the session list based on sessionName
+        """
+        if self.sessionList is None:
+            print("Create the sessionList before calling project.getSession()")
+            return None
+        
+        return [ses for ses in self.sessionList if ses.name==sessionName ][0]
+        
+        
+        
+    
     def getTrialVariables(self):
         """
         Concanate the trial variables of all sessions in the project

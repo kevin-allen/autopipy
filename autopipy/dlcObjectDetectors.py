@@ -727,7 +727,7 @@ class BridgeDetector(Dlc):
         return self.bridgeCoordinates
 
 
-    def labelImage(self,pathVideoFile,outputImageFile):
+    def labelImage(self,pathVideoFile,outputImageFile,skip=30):
         """
         Save an image in a file with the detected bridge
         
@@ -741,7 +741,10 @@ class BridgeDetector(Dlc):
            
         self.pathVideoFile = pathVideoFile
         cap = cv2.VideoCapture(self.pathVideoFile)
-        ret, frame = cap.read()
+        index=0
+        while index < skip:
+            ret, frame = cap.read()
+            index+=1
         
         for i in range(self.bridgeCoordinates.shape[0]):
             cv2.circle(frame,(self.bridgeCoordinates[i,0],self.bridgeCoordinates[i,1]),3,(0,255,0),2)

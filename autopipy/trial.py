@@ -289,7 +289,7 @@ class Trial:
         ## test the synchronization at for the whole session as an extra precaution
         if len(videoLog.time) != len(mLPosi.mouseX):
             print("videoLog {} is not the same length as mLPosi {}".format(len(videoLog.time),len(mLPosi.mouseX)))
-            print("self.valid set to False")
+            print("{}, self.valid set to False".format(self.name))
             self.valid = False
         
         if printName : 
@@ -311,7 +311,7 @@ class Trial:
         validMouse = np.sum(~np.isnan(self.trialMLPx.mouseX)) 
         if np.sum(~np.isnan(self.trialMLPx.mouseX)) < 20:
             print("{}, the mouse was detected for fewer than 20 frames during the trial".format(self.name))
-            print("self.valid set to False")
+            print("{}, self.valid set to False".format(self.name))
             self.valid = False
         
        
@@ -338,7 +338,7 @@ class Trial:
                 if (isBridge or isHome):
                     break
                     
-            print("self.startTime was adjusted by {:2.2} s".format(back))
+            print("{}, self.startTime was adjusted by {:2.2} s".format(self.name,back))
             ###########################################################
             # update the mouse and lever tracking data for the trial ##
             ###########################################################
@@ -368,7 +368,7 @@ class Trial:
         self.maxInterFrameIntervals=self.trialVideoLog.time.diff().max()
         if self.maxInterFrameIntervals > 0.25 :
             print("{}, there are gaps larger than 0.25 in the video for this trial".format(self.name))
-            print("self.valid set to False")
+            print("{}, self.valid set to False".format(self.name))
             self.valid = False
         
         #######################################
@@ -484,7 +484,7 @@ class Trial:
         self.nLeverPresses = len(self.leverPress.time)
         if self.nLeverPresses == 0:
             print("{}, no lever press".format(self.name))
-            print("self.valid set to False")
+            print("{}, self.valid set to False".format(self.name))
             self.valid=False
             
         
@@ -519,7 +519,24 @@ class Trial:
         bridgeArenaCenter = self.stateDF[ (self.stateDF.loca=="bridge") | (self.stateDF.loca=="arenaCenter") ]
         df = pd.DataFrame({"start" : bridgeArenaCenter.shift().loca,"end" : bridgeArenaCenter.loca})
         self.journeyTransitionIndices = df[(df.start=="bridge") & (df.end=="arenaCenter")].index.values - 1 # - 1 because of the shift
-        self.nJourneys=len(self.journeyTransitionIndices)
+        
+        ## if the mouse first appeared on the arena at the beginning of the trial, add one journey starting at the first arena 
+        if np.sum(df.end=="arenaCenter")>0:
+            if np.sum(df.start=="bridge")==0:
+                print("{}, no bridge time in the trial".format(self.name))
+                print("{}, add a journey missed because of no brige time before first arenaCenter".format(self.name))
+                firstArenaCenterIndex = df[(df.end=="arenaCenter")].index[0]
+                self.journeyTransitionIndices = np.insert(self.journeyTransitionIndices,0,firstArenaCenterIndex-1)
+            else :
+                firstBridgeIndex = df[(df.start=="bridge")].index[0]
+                firstArenaCenterIndex = df[(df.end=="arenaCenter")].index[0]
+                if firstArenaCenterIndex < firstBridgeIndex:
+                    print("{}, add a journey missed because of no brige time before first arenaCenter".format(self.name))
+                    self.journeyTransitionIndices = np.insert(self.journeyTransitionIndices,0,firstArenaCenterIndex-1)
+
+        self.nJourneys=len(self.journeyTransitionIndices)                      
+        
+        
         
         # check if the mouse found the lever and press it for each journey
         if len(self.journeyTransitionIndices) > 0:
@@ -554,7 +571,7 @@ class Trial:
         ####################################################################
         if np.sum(self.stateDF.loca=="lever") == 0 :
             print("{}, no time in the lever zone".format(self.name))
-            print("self.valid set to False")
+            print("{}, self.valid set to False".format(self.name))
             self.valid=False
         
         ###################################################################
@@ -564,7 +581,7 @@ class Trial:
         if self.nLeverPresses > 0 :
             if np.sum(self.stateDF.loca.loc[self.leverPress.videoIndex.iloc[0]] == "lever") == 0 :
                 print("{}, mouse not in the lever zone when the lever was pressed".format(self.name))
-                print("self.valid set to False")
+                print("{}, self.valid set to False".format(self.name))
                 self.valid=False
         
         ######################################################
@@ -572,7 +589,7 @@ class Trial:
         ######################################################
         if np.sum(self.stateDF.arena) == 0 :
             print("{}, no time on the arena".format(self.name))
-            print("self.valid set to False")
+            print("{}, self.valid set to False".format(self.name))
             self.valid=False
         
         
@@ -622,8 +639,8 @@ class Trial:
             ## searchArena, from first step on the arena after the last bridge to lever pressing
             bridgeIndex = self.stateDF[self.stateDF.loca=="bridge"].index
             if len(bridgeIndex[(bridgeIndex.values < self.leverPress.videoIndex.iloc[0])])==0:
-                print("no bridge before lever press in trial {}".format(self.trialNo))
-                print("This situation could be caused by video synchronization problems")
+                print("{}, no bridge before lever press".format(self.name))
+                print("This situation could be caused by video synchronization problems or mouse not being visible when on the bridge")
                 lastBridgeIndexBeforePress=self.startVideoIndex
             else :
                 lastBridgeIndexBeforePress = (bridgeIndex[(bridgeIndex.values < self.leverPress.videoIndex.iloc[0])])[-1]
@@ -634,8 +651,8 @@ class Trial:
             self.searchArenaNoLeverStartIndex = self.searchArenaStartIndex
             ## in very rare cases, there is no lever zone before the lever press
             if np.sum( (leverIndex.values > lastBridgeIndexBeforePress) &  (leverIndex.values < self.leverPress.videoIndex.iloc[0])) == 0 :
-                print("no lever time between leaving the bridge and pressing the lever")
-                print("setting the end of the search path at the lever press")
+                print("{}, no lever time between leaving the bridge and pressing the lever".format(self.name))
+                print("{}, setting the end of the search path at the lever press".format(self.name))
                 self.searchArenaNoLeverEndIndex = leverIndex[0]
             else :
                 self.searchArenaNoLeverEndIndex = (leverIndex[(leverIndex.values >lastBridgeIndexBeforePress) &
@@ -647,8 +664,8 @@ class Trial:
             ## homingTotal, from first lever press to first bridge after the press
             self.homingTotalStartIndex = self.leverPress.videoIndex.iloc[0]
             if len(bridgeIndex[(bridgeIndex.values > self.leverPress.videoIndex.iloc[0])])==0:
-                print("no bridge after lever press in trial {}".format(self.trialNo))
-                print("This situation could be caused by video synchronization problems")
+                print("{}, no bridge after lever press".format(self.name))
+                print("This situation could be caused by video synchronization problems or mouse not being visible when on the bridge")
                 firstBridgeIndexAfterPress=self.endVideoIndex
             else :
                 firstBridgeIndexAfterPress = (bridgeIndex[(bridgeIndex.values > self.leverPress.videoIndex.iloc[0])])[0]
@@ -745,7 +762,7 @@ class Trial:
         """
         return self.trialVideoLog.frame_number.iloc[np.argmin(np.abs(self.trialVideoLog.time - timeStamp))]  
         
-    def createTrialVideo(self,pathVideoFile,pathVideoFileOut):
+    def createTrialVideo(self,pathVideoFile,pathVideoFileOut,decorate=True):
         
         if not os.path.isfile(pathVideoFile):
             print(pathVideoFile + " does not exist")
@@ -814,7 +831,8 @@ class Trial:
         count = 0
         for i in range(self.startVideoIndex,self.endVideoIndex+1):
             ret, frame = cap.read()
-            frame = self.decorateVideoFrame(frame,i,count,maskDict)
+            if decorate:
+                frame = self.decorateVideoFrame(frame,i,count,maskDict)
             
             out.write(frame)
             count=count+1
@@ -1230,6 +1248,9 @@ class Trial:
             return lightEvents.param[lightEvents.time< self.startTime].tail(1).to_numpy()[0]
 
     def trialPathFigure(self):
+        """
+        Plot the path of the animal on the arena with the lever
+        """
         # to plot the arena circle
         arena=np.arange(start=0,stop=2*np.pi,step=0.02)
         
@@ -1237,22 +1258,32 @@ class Trial:
         fig, axes = plt.subplots(1,1,figsize=(3,3))
         plt.subplots_adjust(wspace=0.3,hspace=0.3)
 
-        # what needs to be applied to all graphs
+        # plot the arena and arena periphery
         axes.set_aspect('equal', adjustable='box')
         axes.plot(np.cos(arena)*self.arenaRadiusCm,np.sin(arena)*self.arenaRadiusCm,label="Arena",color="gray")
         axes.plot(np.cos(arena)*self.arenaRadiusCm*self.arenaRadiusProportionToPeri,
                      np.sin(arena)*self.arenaRadiusCm*self.arenaRadiusProportionToPeri,label="Periphery",color="gray",linestyle='dashed')
         axes.set_xlabel("cm")
         axes.set_ylabel("cm")
+        
         ## mouse path
         axes.plot(self.trialMLCm.mouseX,self.trialMLCm.mouseY)
         ## lever
-        axes.plot(self.leverCm.pointsPlot[:,0],self.leverCm.pointsPlot[:,1])
-        axes.plot(self.leverCm.zonePointsPlot[:,0],self.leverCm.zonePointsPlot[:,1])
+        axes.plot(self.leverCm.pointsPlot[:,0],self.leverCm.pointsPlot[:,1], color = "gray")
+        axes.plot(self.leverCm.zonePointsPlot[:,0],self.leverCm.zonePointsPlot[:,1], color = "gray",linestyle="dotted")
         ## mouse position at lever presses
         if self.nLeverPresses > 0:
             axes.scatter(self.trialMLCm.mouseX[self.leverPressVideoIndex],
-                         self.trialMLCm.mouseY[self.leverPressVideoIndex])
+                         self.trialMLCm.mouseY[self.leverPressVideoIndex],color="red")
+        
+        ## reaching periphery point
+        if self.valid > 0:
+            # mouse position dot
+            axes.scatter(self.peripheryAfterFirstLeverPressCoordCm[0],self.peripheryAfterFirstLeverPressCoordCm[1]
+                     ,color="blue")
+
+                
+        
         
     
     def __str__(self):

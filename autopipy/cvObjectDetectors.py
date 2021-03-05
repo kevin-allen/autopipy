@@ -76,7 +76,7 @@ class ArenaDetector:
 
         return self.coordinates
     
-    def labelImage(self,pathVideoFile,outputImageFile):
+    def labelImage(self,pathVideoFile,outputImageFile,skip=30):
         """
         Save an image in a file with the detected arena
         
@@ -90,7 +90,10 @@ class ArenaDetector:
            
         self.pathVideoFile = pathVideoFile
         cap = cv2.VideoCapture(self.pathVideoFile)
-        ret, frame = cap.read()
+        index=0
+        while index < skip:
+            ret, frame = cap.read()
+            index+=1
         
         cv2.circle(frame,(self.coordinates[0],self.coordinates[1]),self.coordinates[2],(0,255,0),2)
         cv2.circle(frame,(self.coordinates[0],self.coordinates[1]),2,(0,0,255),3)

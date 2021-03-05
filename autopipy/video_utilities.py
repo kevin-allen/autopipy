@@ -285,7 +285,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     bridgeImageFile = ses.path+"/bridgeDetectionCropped.png"
     bridgeD = BridgeDetector(pathConfigFile=configFile)
     bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=numFramesBridgeDetection, skip=30)
-    bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
+    bridgeD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=bridgeImageFile)
     np.savetxt(ses.fileNames["bridgeCoordinates"],bCoord,delimiter=",")
     
     outputImageFile=ses.path+"/arenaBridgeDetectionCropped.png"
