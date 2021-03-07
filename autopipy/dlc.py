@@ -21,7 +21,7 @@ class Dlc():
         pathConfigFile: path to the configuration file of the deeplabcut model
         pathVideoFile: path to the video file analyzed
         pathVideoOutputH5: path to the output data
-        out: output data, read from the h5 file
+        out: output data, read from the h5 file, one row per frame
     Methods:
         inferenceVideo()
         loadPositionData()

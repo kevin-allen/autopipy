@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 
 class NavPath:
     """
@@ -9,14 +10,11 @@ class NavPath:
     The class calculates some statistics about the path.
     
     If a target is defined, statistics regardign the relationship between the path and the target will be calculated.
-    
-    When calculating angles, the y coordinate is reversed (0-y) so that 90 degree is up.
-    This is done because the y-axis is reversed in the videos.
-    
+      
     
     
     Attributes:
-        pPose: numpy array with columns x y z yaw pitch roll time, the rows are different time points
+        pPose: numpy array with columns [x, y, z, yaw, pitch, roll, time], the rows are different time points
         target: numpy array with Pose (x, y, z, yaw, pitch, roll) of a theoretical target for the path
         length
         duration
@@ -25,15 +23,34 @@ class NavPath:
         meanVectorLengthOri
         meanVectorDirectionOri
         meanSpeed
+        speedProfile: speed over the path, path split in 10 equal bins
+        oriAngularDistance
+        oriAngularSpeed
+        mvAngularDistance
+        mvAngularSpeed
         medianMVDeviationToTarget
         medianHDDeviationToTarget
     Methods:
     """
     def __init__(self, pPose, targetPose=None,name=None):
+        """
+        Attributes:
+        pPose: 2D numpy array with 7 columns [x, y, z, yaw, pitch, roll, time], angles are in degrees
+        targetPose: 2D numpy array with Pose (x, y, z, yaw, pitch, roll), angles are in degrees
+        """
+        
         self.pPose = pPose
         self.targetPose = targetPose
         self.name = name
-        if self.pPose is None or self.pPose.shape[0] < 2 :  
+        
+        if self.pPose.shape[1] != 7 :
+            print("{} :pPose should have 7 columns [x, y, z, yaw, pitch, roll, time]".format(self.name))
+            self.pPose = None
+        if self.pPose.shape[0] < 2 :  
+            print("{} :pPose has a length of {}".format(self.name,self.pPose.shape[0]))
+            self.pPose = None
+        
+        if self.pPose is None :
             print("{} :empty NavPath created".format(self.name))
             self.length = np.NAN
             self.duration = np.NAN
@@ -42,14 +59,18 @@ class NavPath:
             self.meanVectorLengthOri = np.array([np.NAN,np.NAN,np.NAN])
             self.meanVectorDirectionOri = np.array([np.NAN,np.NAN,np.NAN])
             self.meanSpeed = np.NAN
+            self.oriAngularDistance =  np.array([np.NAN,np.NAN,np.NAN])
+            self.oriAngularSpeed = np.array([np.NAN,np.NAN,np.NAN])
+            self.mvAngularDistance =  np.NAN
+            self.mvAngularSpeed = np.NAN
             self.medianMVDeviationToTarget=np.NAN
             self.medianHDDeviationToTarget=np.NAN
             return
         
         
         posi = self.pPose[:,0:3] # get position data
-        self.mv = np.diff(posi,axis = 0) # change in position for 3 columns
-        mv3 = np.sqrt(np.sum(self.mv*self.mv,axis = 1)) # distance between consecutive position
+        self.mv = np.diff(posi,axis = 0) # movement vector in x y z dimensions
+        mv3 = np.sqrt(np.sum(self.mv*self.mv,axis = 1)) # length of vectors (pythagoras) 
         
         # length of the path in 3D
         self.length = np.sum(mv3)
@@ -73,11 +94,36 @@ class NavPath:
         self.meanVectorDirectionOri = np.apply_along_axis(self.meanVectorDirection, 0, ori)
         
         # mean linear speed
-        self.meanSpeed = self.length/self.duration 
-    
+        self.meanSpeed = self.length/self.duration
+        timeDiff=np.diff(self.pPose[:,6],axis = 0)
+        
+        # speed profile in the path divided into 10 equal bins 
+        speed=mv3/timeDiff
+        x=np.arange(len(speed))
+        binRes = stats.binned_statistic(x,speed,"mean",bins=10)
+        self.speedProfile = binRes.statistic     
+        
+        # calculate the sum of difference in head orientation for the 3 axes
+        oriDiff= np.abs(np.diff(ori,axis=0)) # change in orientation for yaw, pitch, roll
+        # we need to remove np.nan values if there are some
+        
+        oriDiff=oriDiff[~np.isnan(oriDiff).any(axis=1), :]
+        oriDiff = np.where(oriDiff>180,360-oriDiff,oriDiff)
+        self.oriAngularDistance = np.sum(oriDiff, axis= 0)
+        self.oriAngularSpeed = self.oriAngularDistance/self.duration
+        
+        # calculate the sum of difference in movement direction for x, y, z dimensions
+        mvAngle = np.empty(self.mv.shape[0]-1)
+        for i in np.arange(self.mv.shape[0]-1):
+            # reshape to make suitable for vectorAngle function
+            v1 = np.reshape(self.mv[i,:],(1,-1))
+            v2 = np.reshape(self.mv[i+1,:],(1,-1))
+            mvAngle[i] = self.vectorAngle(v=v1,rv=v2,degrees=True) 
+        self.mvAngularDistance = np.sum(mvAngle)
+        self.mvAngularSpeed=self.mvAngularDistance/self.duration
+          
         
         # if we have a target, calculate whether the path lead to the target       
-        
         self.medianMVDeviationToTarget=np.NAN
         self.medianHDDeviationToTarget=np.NAN
         if targetPose is not None:
@@ -94,7 +140,7 @@ class NavPath:
             hdv = self.unityVectorsFromAngles(self.pPose[:,3]) # only yaw
             angles=self.vectorAngle(hdv,tv[:,0:2],degrees=True,quadrant=False)
             self.medianHDDeviationToTarget = np.nanmedian(angles)
-            
+        
     def unityVectorsFromAngles(self,theta,degree=True):
         if degree:
             theta = theta*np.pi/180
@@ -122,12 +168,12 @@ class NavPath:
         vLen[vLen==0] = np.NAN
         rvLen = np.sqrt(np.sum(rv*rv,axis=1))
 
-        # get unitary vector
+        # get unitary vectors
         uv = v/vLen[:,None]
         urv = rv/rvLen[:,None]
 
-        # get the angle
-        theta = np.arccos(np.sum(uv*urv,axis=1))
+        # get the angle, dot product, then acos
+        theta = np.arccos(np.clip(np.sum(uv*urv,axis=1),  -1.0, 1.0))
 
         if quadrant:
             # deal with the 3 and 4 quadrant

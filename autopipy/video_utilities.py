@@ -198,7 +198,8 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
                                       arenaMaxRadius= 230,
                                       arenaCircleMethod = "min",
                                       numFramesArenaDetection=500,
-                                      numFramesBridgeDetection=500):
+                                      numFramesBridgeDetection=500,
+                                      labelDlcMouseLeverVideo=False):
     """
     Function to do all the video processing to get the position of the animal on the arena
 
@@ -259,11 +260,9 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     duration = now-start_time
     print("Time elapsed", str(duration))
     
-    #############################
-    # need to fix this function #
-    #############################
-    #labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
-    #mouseLeverD.labelVideoMouseLever(pathVideoFile=croppedVideoFile,pathOutputFile=labeledVideoFile)
+    if labelDlcMouseLeverVideo :
+        labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
+        mouseLeverD.labelVideo(pathVideoFile=croppedVideoFile)
 
     now = datetime.now()
     duration = now-start_time

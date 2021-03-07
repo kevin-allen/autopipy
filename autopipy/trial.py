@@ -110,14 +110,15 @@ class Trial:
         self.homingPeriNoLeverEndIndex = None
         self.peripheryAfterFirstLeverPressVideoIndex = None
       
-        ## NavPath objects
-        self.searchTotalNavPath = None
-        self.searchArenaNavPath = None
-        self.searchArenaNoLeverNavPath = None
-        self.homingTotalNavPath = None
-        self.homingPeriNavPath = None
-        self.homingPeriNoLeverNavPath = None
-    
+        ## NavPath objects, since we have many, we store them in a dictionary
+        # pd for path dictionary
+        self.pd = {"searchTotal": [None], 
+                    "searchArena" : [None],
+                    "searchArenaNoLever" : [None],
+                    "homingTotal" : [None],
+                    "homingPeri" : [None],
+                    "homingPeriNoLever" : [None]}
+        
     def getTrialVariables(self):
         """
         Return a pandas DataFrame with most trial variables
@@ -158,66 +159,95 @@ class Trial:
                        "timeLever" : self.stateTime["lever"],
                        
                        # for searchTotal path 
-                       "searchTotal_length" : [self.searchTotalNavPath.length],
-                       "searchTotal_duration" : [self.searchTotalNavPath.duration],
-                        "searchTotal_meanVectorLengthPosi" : [self.searchTotalNavPath.meanVectorLengthPosi],
-                        "searchTotal_meanVectorDirectionPosi": [self.searchTotalNavPath.meanVectorDirectionPosi],
-                        "searchTotal_meanVectorLengthOri" : [self.searchTotalNavPath.meanVectorLengthOri[0]],
-                        "searchTotal_meanVectorDirectionOri" : [self.searchTotalNavPath.meanVectorDirectionOri[0]],
-                        "searchTotal_meanSpeed" : [self.searchTotalNavPath.meanSpeed],
-                        "searchTotal_medianMVDeviationToTarget" : [self.searchTotalNavPath.medianMVDeviationToTarget],
-                        "searchTotal_medianHDDeviationToTarget" : [self.searchTotalNavPath.medianHDDeviationToTarget],
+                       "searchTotal_length" : [self.pd["searchTotal"].length],
+                       "searchTotal_duration" : [self.pd["searchTotal"].duration],
+                        "searchTotal_meanVectorLengthPosi" : [self.pd["searchTotal"].meanVectorLengthPosi],
+                        "searchTotal_meanVectorDirectionPosi": [self.pd["searchTotal"].meanVectorDirectionPosi],
+                        "searchTotal_meanVectorLengthOri" : [self.pd["searchTotal"].meanVectorLengthOri[0]],
+                        "searchTotal_meanVectorDirectionOri" : [self.pd["searchTotal"].meanVectorDirectionOri[0]],
+                        "searchTotal_meanSpeed" : [self.pd["searchTotal"].meanSpeed],
+                        "searchTotal_mvAngularDistance" : [self.pd["searchTotal"].mvAngularDistance],
+                        "searchTotal_mvAngularSpeed" : [self.pd["searchTotal"].mvAngularSpeed],
+                        "searchTotal_oriAngularDistance" : [self.pd["searchTotal"].oriAngularDistance[0]],
+                        "searchTotal_oriAngularSpeed" : [self.pd["searchTotal"].oriAngularSpeed[0]],
+                        "searchTotal_medianMVDeviationToTarget" : [self.pd["searchTotal"].medianMVDeviationToTarget],
+                        "searchTotal_medianHDDeviationToTarget" : [self.pd["searchTotal"].medianHDDeviationToTarget],
                       # for searchArena path 
-                       "searchArena_length" : [self.searchArenaNavPath.length],
-                       "searchArena_duration" : [self.searchArenaNavPath.duration],
-                        "searchArena_meanVectorLengthPosi" : [self.searchArenaNavPath.meanVectorLengthPosi],
-                        "searchArena_meanVectorDirectionPosi": [self.searchArenaNavPath.meanVectorDirectionPosi],
-                        "searchArena_meanVectorLengthOri" : [self.searchArenaNavPath.meanVectorLengthOri[0]],
-                        "searchArena_meanVectorDirectionOri" : [self.searchArenaNavPath.meanVectorDirectionOri[0]],
-                        "searchArena_meanSpeed" : [self.searchArenaNavPath.meanSpeed],
-                        "searchArena_medianMVDeviationToTarget" : [self.searchArenaNavPath.medianMVDeviationToTarget],
-                        "searchArena_medianHDDeviationToTarget" : [self.searchArenaNavPath.medianHDDeviationToTarget],
+                       "searchArena_length" : [self.pd["searchArena"].length],
+                       "searchArena_duration" : [self.pd["searchArena"].duration],
+                        "searchArena_meanVectorLengthPosi" : [self.pd["searchArena"].meanVectorLengthPosi],
+                        "searchArena_meanVectorDirectionPosi": [self.pd["searchArena"].meanVectorDirectionPosi],
+                        "searchArena_meanVectorLengthOri" : [self.pd["searchArena"].meanVectorLengthOri[0]],
+                        "searchArena_meanVectorDirectionOri" : [self.pd["searchArena"].meanVectorDirectionOri[0]],
+                        "searchArena_meanSpeed" : [self.pd["searchArena"].meanSpeed],
+                        "searchArena_mvAngularDistance" : [self.pd["searchArena"].mvAngularDistance],
+                        "searchArena_mvAngularSpeed" : [self.pd["searchArena"].mvAngularSpeed],
+                        "searchArena_oriAngularDistance" : [self.pd["searchArena"].oriAngularDistance[0]],
+                        "searchArena_oriAngularSpeed" : [self.pd["searchArena"].oriAngularSpeed[0]],
+                        "searchArena_medianMVDeviationToTarget" : [self.pd["searchArena"].medianMVDeviationToTarget],
+                        "searchArena_medianHDDeviationToTarget" : [self.pd["searchArena"].medianHDDeviationToTarget],
                        # for searchArenaNoLever path
-                       "searchArenaNoLever_length" : [self.searchArenaNoLeverNavPath.length],
-                       "searchArenaNoLever_duration" : [self.searchArenaNoLeverNavPath.duration],
-                        "searchArenaNoLever_meanVectorLengthPosi" : [self.searchArenaNoLeverNavPath.meanVectorLengthPosi],
-                        "searchArenaNoLever_meanVectorDirectionPosi": [self.searchArenaNoLeverNavPath.meanVectorDirectionPosi],
-                        "searchArenaNoLever_meanVectorLengthOri" : [self.searchArenaNoLeverNavPath.meanVectorLengthOri[0]],
-                        "searchArenaNoLever_meanVectorDirectionOri" : [self.searchArenaNoLeverNavPath.meanVectorDirectionOri[0]],
-                        "searchArenaNoLever_meanSpeed" : [self.searchArenaNoLeverNavPath.meanSpeed],
-                        "searchArenaNoLever_medianMVDeviationToTarget" : [self.searchArenaNoLeverNavPath.medianMVDeviationToTarget],
-                        "searchArenaNoLever_medianHDDeviationToTarget" : [self.searchArenaNoLeverNavPath.medianHDDeviationToTarget],
+                       "searchArenaNoLever_length" : [self.pd["searchArenaNoLever"].length],
+                       "searchArenaNoLever_duration" : [self.pd["searchArenaNoLever"].duration],
+                        "searchArenaNoLever_meanVectorLengthPosi" : [self.pd["searchArenaNoLever"].meanVectorLengthPosi],
+                        "searchArenaNoLever_meanVectorDirectionPosi": [self.pd["searchArenaNoLever"].meanVectorDirectionPosi],
+                        "searchArenaNoLever_meanVectorLengthOri" : [self.pd["searchArenaNoLever"].meanVectorLengthOri[0]],
+                        "searchArenaNoLever_meanVectorDirectionOri" : [self.pd["searchArenaNoLever"].meanVectorDirectionOri[0]],
+                        "searchArenaNoLever_meanSpeed" : [self.pd["searchArenaNoLever"].meanSpeed],
+                        "searchArenaNoLever_mvAngularDistance" : [self.pd["searchArenaNoLever"].mvAngularDistance],
+                        "searchArenaNoLever_mvAngularSpeed" : [self.pd["searchArenaNoLever"].mvAngularSpeed],
+                        "searchArenaNoLever_oriAngularDistance" : [self.pd["searchArenaNoLever"].oriAngularDistance[0]],
+                        "searchArenaNoLever_oriAngularSpeed" : [self.pd["searchArenaNoLever"].oriAngularSpeed[0]],
+                        "searchArenaNoLever_medianMVDeviationToTarget" : [self.pd["searchArenaNoLever"].medianMVDeviationToTarget],
+                        "searchArenaNoLever_medianHDDeviationToTarget" : [self.pd["searchArenaNoLever"].medianHDDeviationToTarget],
                        # for the homingTotal path 
-                       "homingTotal_length" : [self.homingTotalNavPath.length],
-                       "homingTotal_duration" : [self.homingTotalNavPath.duration],
-                        "homingTotal_meanVectorLengthPosi" : [self.homingTotalNavPath.meanVectorLengthPosi],
-                        "homingTotal_meanVectorDirectionPosi": [self.homingTotalNavPath.meanVectorDirectionPosi],
-                        "homingTotal_meanVectorLengthOri" : [self.homingTotalNavPath.meanVectorLengthOri[0]],
-                        "homingTotal_meanVectorDirectionOri" : [self.homingTotalNavPath.meanVectorDirectionOri[0]],
-                        "homingTotal_meanSpeed" : [self.homingTotalNavPath.meanSpeed],
-                        "homingTotal_medianMVDeviationToTarget" : [self.homingTotalNavPath.medianMVDeviationToTarget],
-                        "homingTotal_medianHDDeviationToTarget" : [self.homingTotalNavPath.medianHDDeviationToTarget],
+                       "homingTotal_length" : [self.pd["homingTotal"].length],
+                       "homingTotal_duration" : [self.pd["homingTotal"].duration],
+                        "homingTotal_meanVectorLengthPosi" : [self.pd["homingTotal"].meanVectorLengthPosi],
+                        "homingTotal_meanVectorDirectionPosi": [self.pd["homingTotal"].meanVectorDirectionPosi],
+                        "homingTotal_meanVectorLengthOri" : [self.pd["homingTotal"].meanVectorLengthOri[0]],
+                        "homingTotal_meanVectorDirectionOri" : [self.pd["homingTotal"].meanVectorDirectionOri[0]],
+                        "homingTotal_meanSpeed" : [self.pd["homingTotal"].meanSpeed],
+                        "homingTotal_mvAngularDistance" : [self.pd["homingTotal"].mvAngularDistance],
+                        "homingTotal_mvAngularSpeed" : [self.pd["homingTotal"].mvAngularSpeed],
+                        "homingTotal_oriAngularDistance" : [self.pd["homingTotal"].oriAngularDistance[0]],
+                        "homingTotal_oriAngularSpeed" : [self.pd["homingTotal"].oriAngularSpeed[0]],
+                        "homingTotal_medianMVDeviationToTarget" : [self.pd["homingTotal"].medianMVDeviationToTarget],
+                        "homingTotal_medianHDDeviationToTarget" : [self.pd["homingTotal"].medianHDDeviationToTarget],
                        # for the homingPeri path
-                       "homingPeri_length" : [self.homingPeriNavPath.length],
-                       "homingPeri_duration" : [self.homingPeriNavPath.duration],
-                        "homingPeri_meanVectorLengthPosi" : [self.homingPeriNavPath.meanVectorLengthPosi],
-                        "homingPeri_meanVectorDirectionPosi": [self.homingPeriNavPath.meanVectorDirectionPosi],
-                        "homingPeri_meanVectorLengthOri" : [self.homingPeriNavPath.meanVectorLengthOri[0]],
-                        "homingPeri_meanVectorDirectionOri" : [self.homingPeriNavPath.meanVectorDirectionOri[0]],
-                        "homingPeri_meanSpeed" : [self.homingPeriNavPath.meanSpeed],
-                        "homingPeri_medianMVDeviationToTarget" : [self.homingPeriNavPath.medianMVDeviationToTarget],
-                        "homingPeri_medianHDDeviationToTarget" : [self.homingPeriNavPath.medianHDDeviationToTarget],
+                       "homingPeri_length" : [self.pd["homingPeri"].length],
+                       "homingPeri_duration" : [self.pd["homingPeri"].duration],
+                        "homingPeri_meanVectorLengthPosi" : [self.pd["homingPeri"].meanVectorLengthPosi],
+                        "homingPeri_meanVectorDirectionPosi": [self.pd["homingPeri"].meanVectorDirectionPosi],
+                        "homingPeri_meanVectorLengthOri" : [self.pd["homingPeri"].meanVectorLengthOri[0]],
+                        "homingPeri_meanVectorDirectionOri" : [self.pd["homingPeri"].meanVectorDirectionOri[0]],
+                        "homingPeri_meanSpeed" : [self.pd["homingPeri"].meanSpeed],
+                        "homingPeri_mvAngularDistance" : [self.pd["homingPeri"].mvAngularDistance],
+                        "homingPeri_mvAngularSpeed" : [self.pd["homingPeri"].mvAngularSpeed],
+                        "homingPeri_oriAngularDistance" : [self.pd["homingPeri"].oriAngularDistance[0]],
+                        "homingPeri_oriAngularSpeed" : [self.pd["homingPeri"].oriAngularSpeed[0]],
+                        "homingPeri_medianMVDeviationToTarget" : [self.pd["homingPeri"].medianMVDeviationToTarget],
+                        "homingPeri_medianHDDeviationToTarget" : [self.pd["homingPeri"].medianHDDeviationToTarget],
                        # for the homingPeriNoLever
-                       "homingPeriNoLever_length" : [self.homingPeriNoLeverNavPath.length],
-                       "homingPeriNoLever_duration" : [self.homingPeriNoLeverNavPath.duration],
-                        "homingPeriNoLever_meanVectorLengthPosi" : [self.homingPeriNoLeverNavPath.meanVectorLengthPosi],
-                        "homingPeriNoLever_meanVectorDirectionPosi": [self.homingPeriNoLeverNavPath.meanVectorDirectionPosi],
-                        "homingPeriNoLever_meanVectorLengthOri" : [self.homingPeriNoLeverNavPath.meanVectorLengthOri[0]],
-                        "homingPeriNoLever_meanVectorDirectionOri" : [self.homingPeriNoLeverNavPath.meanVectorDirectionOri[0]],
-                        "homingPeriNoLever_meanSpeed" : [self.homingPeriNoLeverNavPath.meanSpeed],
-                        "homingPeriNoLever_medianMVDeviationToTarget" : [self.homingPeriNoLeverNavPath.medianMVDeviationToTarget],
-                        "homingPeriNoLever_medianHDDeviationToTarget" : [self.homingPeriNoLeverNavPath.medianHDDeviationToTarget]} 
+                       "homingPeriNoLever_length" : [self.pd["homingPeriNoLever"].length],
+                       "homingPeriNoLever_duration" : [self.pd["homingPeriNoLever"].duration],
+                        "homingPeriNoLever_meanVectorLengthPosi" : [self.pd["homingPeriNoLever"].meanVectorLengthPosi],
+                        "homingPeriNoLever_meanVectorDirectionPosi": [self.pd["homingPeriNoLever"].meanVectorDirectionPosi],
+                        "homingPeriNoLever_meanVectorLengthOri" : [self.pd["homingPeriNoLever"].meanVectorLengthOri[0]],
+                        "homingPeriNoLever_meanVectorDirectionOri" : [self.pd["homingPeriNoLever"].meanVectorDirectionOri[0]],
+                        "homingPeriNoLever_meanSpeed" : [self.pd["homingPeriNoLever"].meanSpeed],
+                        "homingPeriNoLever_mvAngularDistance" : [self.pd["homingPeriNoLever"].mvAngularDistance],
+                        "homingPeriNoLever_mvAngularSpeed" : [self.pd["homingPeriNoLever"].mvAngularSpeed],
+                        "homingPeriNoLever_oriAngularDistance" : [self.pd["homingPeriNoLever"].oriAngularDistance[0]],
+                        "homingPeriNoLever_oriAngularSpeed" : [self.pd["homingPeriNoLever"].oriAngularSpeed[0]],
+                        "homingPeriNoLever_medianMVDeviationToTarget" : [self.pd["homingPeriNoLever"].medianMVDeviationToTarget],
+                        "homingPeriNoLever_medianHDDeviationToTarget" : [self.pd["homingPeriNoLever"].medianHDDeviationToTarget]} 
         return pd.DataFrame(self.myDict)
+    
+    def getSpeedProfile(pathName = "searchTotal"):
+        return self.pd[pathName].speedProfile
+    
+    
     def trialMLToCm(self):
         """
         Transform mouse and lever data to cm and 0,0 at the center of arena
@@ -692,35 +722,52 @@ class Trial:
             homingPeriPose = self.poseFromTrialData(self.homingPeriStartIndex,
                                                      self.homingPeriEndIndex)
             homingPeriNoLeverPose = self.poseFromTrialData(self.homingPeriNoLeverStartIndex,
-                                                     self.homingPeriNoLeverEndIndex)
+                                                  self.homingPeriNoLeverEndIndex)
+            
+            ## check the poses and report if the length is less than 2
+            poseList=[searchTotalPose, 
+                      searchArenaPose, 
+                       searchArenaNoLeverPose, 
+                       homingTotalPose, 
+                       homingPeriPose, 
+                       homingPeriNoLeverPose]
+            poseNameList=["searchTotalPose", 
+                      "searchArenaPose", 
+                       "searchArenaNoLeverPose", 
+                       "homingTotalPose", 
+                       "homingPeriPose", 
+                       "homingPeriNoLeverPose"] 
+            for a,b in zip(poseList,poseNameList):
+                if (len(a) < 2) :
+                    print("{}, {} path has a length < 2".format(self.name,b))
             
             # targets for the paths
             leverPose = self.poseFromLeverPositionDictionary()
             bridgePose = self.poseFromBridgeCoordinates()
             
             # get the path variables using the NavPath class
-            self.searchTotalNavPath = NavPath(pPose = searchTotalPose,
+            self.pd["searchTotal"] = NavPath(pPose = searchTotalPose,
                                               targetPose=leverPose,name = "searchTotal")
-            self.searchArenaNavPath =  NavPath(pPose = searchArenaPose,
+            self.pd["searchArena"] =  NavPath(pPose = searchArenaPose,
                                               targetPose=leverPose, name = "searchArena")
-            self.searchArenaNoLeverNavPath =  NavPath(pPose = searchArenaNoLeverPose,
-                                              targetPose=leverPose, name = "searchArenaNoLever")
-            self.homingTotalNavPath = NavPath(pPose = homingTotalPose,
+            self.pd["searchArenaNoLever"] =  NavPath(pPose = searchArenaNoLeverPose,
+                                            targetPose=leverPose, name = "searchArenaNoLever")
+            self.pd["homingTotal"] = NavPath(pPose = homingTotalPose,
                                               targetPose=bridgePose, name = "homingTotal")
-            self.homingPeriNavPath = NavPath(pPose = homingPeriPose,
+            self.pd["homingPeri"] = NavPath(pPose = homingPeriPose,
                                               targetPose=bridgePose, name = "homingPeri")
-            self.homingPeriNoLeverNavPath = NavPath(pPose = homingPeriNoLeverPose,
+            self.pd["homingPeriNoLever"] = NavPath(pPose = homingPeriNoLeverPose,
                                               targetPose=bridgePose, name = "homingPeriNoLever")
             
         else : ## there was no lever press or valid mouse position
             self.periArenaCenterBridgeAngle = np.NAN
             # get the path variables using the NavPath class, these will be empty and return np.NAN
-            self.searchTotalNavPath = NavPath(pPose = np.empty((1,7)),name = "searchTotal")
-            self.searchArenaNavPath =  NavPath(pPose =  np.empty((1,7)), name = "searchArena")
-            self.searchArenaNoLeverNavPath =  NavPath(pPose =  np.empty((1,7)),name = "searchArenaNoLever")
-            self.homingTotalNavPath = NavPath(pPose =  np.empty((1,7)), name = "homingTotal")
-            self.homingPeriNavPath = NavPath(pPose =  np.empty((1,7)), name = "homingPeri")
-            self.homingPeriNoLeverNavPath = NavPath(pPose =  np.empty((1,7)), name = "homingPeriNoLever")
+            self.pd["searchTotal"] = NavPath(pPose = np.empty((1,7)),name = "searchTotal")
+            self.pd["searchArena"] =  NavPath(pPose =  np.empty((1,7)), name = "searchArena")
+            self.pd["searchArenaNoLever"] =  NavPath(pPose =  np.empty((1,7)),name = "searchArenaNoLever")
+            self.pd["homingTotal"] = NavPath(pPose =  np.empty((1,7)), name = "homingTotal")
+            self.pd["homingPeri"] = NavPath(pPose =  np.empty((1,7)), name = "homingPeri")
+            self.pd["homingPeriNoLever"] = NavPath(pPose =  np.empty((1,7)), name = "homingPeriNoLever")
         
             
             

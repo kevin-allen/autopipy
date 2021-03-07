@@ -88,7 +88,7 @@ class Lever:
         
         # the longest vector to draw relative to
         vLong = lp-midPosterior # long vector, from midPosterior to leverpress
-        vLongLength = np.sqrt(np.dot(vLong,vLong)) # length
+        vLongLength = np.sqrt(np.dot(vLong,vLong)) # length            
         uvLong = vLong/vLongLength # unit vector
         
         # we will align everything to the vLong vector,
