@@ -311,7 +311,16 @@ class Session:
         dfList = [trial.getTrialVariables() for trial in self.trialList]
         self.trialVariables = pd.concat(dfList)
         self.trialVariables["subject"]=self.subject # add the subject name to the dataframe
-        
+    
+    def getTrialPathSpeedProfile(self,pathName="searchTotal"):
+        """
+        Get a numpy array containing the speed profile of a given path
+        """
+        aList = [ trial.getSpeedProfile(pathName) for trial in self.trialList]
+        self.speedProfile = np.stack(aList, axis=0)
+    
+    
+    
     def createTrialVideos(self,decorate=True):
         """
         Create trial videos in a trialVideos directory

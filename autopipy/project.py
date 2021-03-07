@@ -1,5 +1,6 @@
 import os.path
 import pandas as pd
+import numpy as np
 from autopipy.session import Session
 
 class Project:
@@ -72,12 +73,9 @@ class Project:
         
         return [ses for ses in self.sessionList if ses.name==sessionName ][0]
         
-        
-        
-    
     def getTrialVariables(self):
         """
-        Concanate the trial variables of all sessions in the project
+        Concatenate the trial variables of all sessions in the project
         
         You should call call extractTrialFeatures() getTrialVariablesDataFrame() on each session before calling this
         
@@ -86,4 +84,27 @@ class Project:
     
         dfList = [ses.trialVariables for ses in self.sessionList]
         return pd.concat(dfList)
+    
+    
+    def getTrialPathSpeedProfile(self):
+        """
+        Get a dictionary with the speed profile of all trials
+        """
+        ses = self.sessionList[0]
+        if ses is None:
+            print("Create the sessionList before calling project.getTrialPathSpeedProfile()")
+            return None
         
+        tr = ses.trialList[0]
+        if tr is None:
+            print("Call ses.extractTrialFeatures() on the session of sessionList before calling project.getTrialPathSpeedProfile()")
+            return None
+        
+        self.speedProfile = {} # will be a dictionary, one key per path type
+        for k in ses.trialList[0].pathD:
+            [ ses.getTrialPathSpeedProfile(pathName=k) for ses in self.sessionList ]
+            self.aList = [ ses.speedProfile for ses in self.sessionList ]
+            self.a = np.concatenate(self.aList, axis=0)
+            self.speedProfile[k]=self.a
+        
+        return self.speedProfile

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from scipy import stats
 
 class NavPath:
@@ -59,6 +60,8 @@ class NavPath:
             self.meanVectorLengthOri = np.array([np.NAN,np.NAN,np.NAN])
             self.meanVectorDirectionOri = np.array([np.NAN,np.NAN,np.NAN])
             self.meanSpeed = np.NAN
+            self.speedProfile = np.empty((10))
+            self.speedProfile[:] = np.NAN
             self.oriAngularDistance =  np.array([np.NAN,np.NAN,np.NAN])
             self.oriAngularSpeed = np.array([np.NAN,np.NAN,np.NAN])
             self.mvAngularDistance =  np.NAN
@@ -99,10 +102,19 @@ class NavPath:
         
         # speed profile in the path divided into 10 equal bins 
         speed=mv3/timeDiff
-        x=np.arange(len(speed))
-        binRes = stats.binned_statistic(x,speed,"mean",bins=10)
-        self.speedProfile = binRes.statistic     
-        
+        ##WARNING##
+        # we need to remove na for the stats.binned_statistic
+        # we might want to change this behavior in the future
+        # I do not expect to have many nan in the paths, based on labeled videos
+        speed = speed[~np.isnan(speed)] 
+        if len(speed) > 9 :
+            x=np.arange(len(speed))
+            binRes = stats.binned_statistic(x,speed,"mean",bins=10)
+            self.speedProfile = binRes.statistic     
+        else :
+            self.speedProfile = np.empty((10))
+            self.speedProfile[:] = np.NAN
+            
         # calculate the sum of difference in head orientation for the 3 axes
         oriDiff= np.abs(np.diff(ori,axis=0)) # change in orientation for yaw, pitch, roll
         # we need to remove np.nan values if there are some
@@ -140,13 +152,32 @@ class NavPath:
             hdv = self.unityVectorsFromAngles(self.pPose[:,3]) # only yaw
             angles=self.vectorAngle(hdv,tv[:,0:2],degrees=True,quadrant=False)
             self.medianHDDeviationToTarget = np.nanmedian(angles)
-        
+    
+    
+    def getVariables(self):
+        self.myDict = {
+            "length" : [self.length],
+            "duration" : [self.duration],
+            "meanVectorLengthPosi" : [self.meanVectorLengthPosi],
+            "meanVectorDirectionPosi": [self.meanVectorDirectionPosi],
+            "meanVectorLengthOri" : [self.meanVectorLengthOri[0]],
+            "meanVectorDirectionOri" : [self.meanVectorDirectionOri[0]],
+            "meanSpeed" : [self.meanSpeed],
+            "mvAngularDistance" : [self.mvAngularDistance],
+            "mvAngularSpeed" : [self.mvAngularSpeed],
+            "oriAngularDistance" : [self.oriAngularDistance[0]],
+            "oriAngularSpeed" : [self.oriAngularSpeed[0]],
+            "medianMVDeviationToTarget" : [self.medianMVDeviationToTarget],
+            "medianHDDeviationToTarget" : [self.medianHDDeviationToTarget]}
+        return pd.DataFrame(self.myDict)
+                
+    
     def unityVectorsFromAngles(self,theta,degree=True):
         if degree:
             theta = theta*np.pi/180
         return np.stack((np.cos(theta),np.sin(theta)),axis =1)
 
-           
+      
             
     def vectorAngle(self,v,rv=np.array([[1,0]]),degrees=False,quadrant=False) :
         """
