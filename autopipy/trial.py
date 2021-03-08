@@ -153,7 +153,7 @@ class Trial:
                        "peripheryAfterFirstLeverPressX" : [self.peripheryAfterFirstLeverPressCoordCm[0]],
                        "peripheryAfterFirstLeverPressY" : [self.peripheryAfterFirstLeverPressCoordCm[1]],
                        "peripheryAfterFirstLeverPressAngle" : [self.peripheryAfterFirstLeverPressAngle],
-                       "anglularErrorHomingPeri" : self.periArenaCenterBridgeAngle,
+                       "angularErrorHomingPeri" : self.periArenaCenterBridgeAngle,
                       
                       
                        # total time at different locations
