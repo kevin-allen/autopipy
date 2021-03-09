@@ -14,6 +14,8 @@ We use classes to organize the code in a logical structure that closely maps ont
 * **NavPath**: Represents a path of an animal. This extracts many variables associated with a path (e.g. distance, directional vector length).
 * **Lever**: Represents the lever location in a trial. The class is be used mainly to test if the animal is in the lever zone (right next to the lever).
 
+![alt text][classes.png]
+
 ### Video analysis (object detection)
 
 * **Dlc**: Class to run DeepLabCut inference.
