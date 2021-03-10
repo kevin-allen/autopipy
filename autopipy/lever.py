@@ -5,14 +5,25 @@ class Lever:
     """
     Class representing a lever in space. It is used the points detected by dlc models to estimate where the lever is
     The class is use to estimate whether a mouse is near the lever or on the lever.
+    
+    We use two zones to estimate if the mouse is at the lever. The entry zone is smaller than the exit zone.
+    This was created because there were many false "leaving the lever" events when using one zone for both entering and exiting the lever zone.
+    
     The lever will be modeled as a rectangle and a triangle.
     
     Attributes:
-        points: np.array of the points to trace the countour of the lever
-        zonePoints: np.array of points, scalled up version of the lever countour to establish if the mouse is at the lever
-        pose: np.array with the x y z yaw pitch roll of the lever (middle point)
-        leverPath: matplotlib path of the lever
-        leverZonePath = matplotlib path of the lever zone
+        scalingFactorEnterZone
+        scalingFactorExitZone
+        isAtLeaver
+        pose
+        points
+        pointsPlot
+        enterZonePoints
+        enterZonePointsPlot
+        leverPath
+        enterZoneLeverPath
+        exitZoneLeverPath
+        
         
     Methods:
         calculatePose()
@@ -20,17 +31,37 @@ class Lever:
         
     """
     def __init__(self):
-        self.scallingFactorLarge=1.65 # scaling factor to define the lever zone
-        self.scallingFactorSideWalls = 0.8 # length of the side walls relative to the long axis (posterior middle point to lever press)
+        self.scalingFactorEnterZone=1.65 # scaling factor to define whether the mouse is at the lever (arriving in the zone)
+        self.scalingFactorExitZone=2.00 # scaling factor to define whether the mouse is at the lever (exiting the zone)
+        self.scalingFactorSideWalls = 0.8 # length of the side walls relative to the long axis (posterior middle point to lever press)
+        self.isAtLever = False
         
     def isAt(self,points):
         """
-        Function to establish if a point is within the lever zone defined by the zonePoints polygone
+        Function to determine if the animal was at the lever. 
+        Different lever zones are used depending if the animal was or not in the lever zone previously
+        The zone to test whether the mouse has left the lever zone is slightly larger than that to test whether the mouse has entered the lever zone
+        
         Arguments
             points, np.array [n,2] containing the points to test
         """
-        return self.leverZonePath.contains_points(points)
-    
+        res = np.empty(points.shape[0],dtype=bool) # to return the results
+        
+        # we have to loop through
+        for i in range(points.shape[0]):
+            if self.isAtLever : # check if animal has left
+                v = self.exitZoneLeverPath.contains_points(np.expand_dims(points[i,:],axis=0))
+                if v == False:
+                    self.isAtLever=False # mouse is not at the lever
+                res[i] = v
+            else : # check if animal has entered
+                v = self.enterZoneLeverPath.contains_points(np.expand_dims(points[i,:],axis=0))
+                if v == True:
+                    self.isAtLever=True # mouse is at the lever
+                res[i] = v
+        return res
+            
+
     def calculatePose(self,lp=None,pl=None,pr=None):
         """
         The inputs are 3  1D np.arrays of length 2. They correspond to the following points
@@ -99,32 +130,35 @@ class Lever:
         # our 5 points forming the lever
         p0 = np.array([0,0])
         p1 = p0 + vBase/2
-        p2 = p1 + vLong * self.scallingFactorSideWalls
+        p2 = p1 + vLong * self.scalingFactorSideWalls
         p3 = p0 + vLong
         p5 = p0 - vBase/2
-        p4 = p5 + vLong * self.scallingFactorSideWalls
+        p4 = p5 + vLong * self.scalingFactorSideWalls
                 
         self.points = np.stack((p0,p1,p2,p3,p4,p5))
 
         # We can scale this up to have an area surrounding the actual lever
         
-        self.zonePoints = self.points * self.scallingFactorLarge
-        
-        
+        self.enterZonePoints = self.points * self.scalingFactorEnterZone
+        self.exitZonePoints = self.points * self.scalingFactorExitZone
+
         # Point 0,0 is the middle of the base (posterior side)
         # We need to translate the points so that they are on the original lever
         # We can align with the lever press 
         self.points = self.points  + (lp-p3)
-        
         self.pointsPlot = np.append(self.points,self.points[0,:]).reshape((-1,2))
         
         # Align with the lever press, then move 
-        self.zonePoints = self.zonePoints + (lp-p3) - (vLong*(self.scallingFactorLarge-1))/2
+        self.enterZonePoints = self.enterZonePoints + (lp-p3) - (vLong*(self.scalingFactorEnterZone-1))/2
+        self.enterZonePointsPlot = np.append(self.enterZonePoints,self.enterZonePoints[0,:]).reshape((-1,2))
+        self.exitZonePoints = self.exitZonePoints + (lp-p3) - (vLong*(self.scalingFactorExitZone-1))/2
+        self.exitZonePointsPlot = np.append(self.exitZonePoints,self.exitZonePoints[0,:]).reshape((-1,2))
         
-        self.zonePointsPlot = np.append(self.zonePoints,self.zonePoints[0,:]).reshape((-1,2))
-        
+        # matplotlib path
         self.leverPath = mpltPath.Path(self.points)
-        self.leverZonePath = mpltPath.Path(self.zonePoints)
+        self.enterZoneLeverPath = mpltPath.Path(self.enterZonePoints)
+        self.exitZoneLeverPath = mpltPath.Path(self.exitZonePoints)
+        
         
     def rotateVector(self,v,angle,degree=True):
         # for other angles

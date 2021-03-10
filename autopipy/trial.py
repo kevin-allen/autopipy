@@ -1135,27 +1135,25 @@ class Trial:
                                 radius=int(self.radiusPeripheryPx), color=(50, 50, 50), thickness=1)
                 
         ## Draw the lever, 
-        for i in range(len(self.leverPx.points[:,0])-1):
+        for i in range(len(self.leverPx.pointsPlot[:,0])-1):
             frame = cv2.line(frame,
-                            (int(self.leverPx.points[i,0]),int(self.leverPx.points[i,1])),
-                            (int(self.leverPx.points[i+1,0]),int(self.leverPx.points[i+1,1])),
-                            (200,200,200),1)
-        # final lever segment
-        frame = cv2.line(frame,
-                            (int(self.leverPx.points[len(self.leverPx.points[:,0])-1,0]),int(self.leverPx.points[len(self.leverPx.points[:,0])-1,1])),
-                            (int(self.leverPx.points[0,0]),int(self.leverPx.points[0,1])),
+                            (int(self.leverPx.pointsPlot[i,0]),int(self.leverPx.pointsPlot[i,1])),
+                            (int(self.leverPx.pointsPlot[i+1,0]),int(self.leverPx.pointsPlot[i+1,1])),
                             (200,200,200),1)
         
-        ## Draw the lever area
-        for i in range(len(self.leverPx.zonePoints[:,0])-1):
+        
+        ## Draw the lever enterZone
+        for i in range(len(self.leverPx.enterZonePointsPlot[:,0])-1):
             frame = cv2.line(frame,
-                            (int(self.leverPx.zonePoints[i,0]),int(self.leverPx.zonePoints[i,1])),
-                            (int(self.leverPx.zonePoints[i+1,0]),int(self.leverPx.zonePoints[i+1,1])),
+                            (int(self.leverPx.enterZonePointsPlot[i,0]),int(self.leverPx.enterZonePointsPlot[i,1])),
+                            (int(self.leverPx.enterZonePointsPlot[i+1,0]),int(self.leverPx.enterZonePointsPlot[i+1,1])),
                             (200,200,200),2)
-        # final lever segment
-        frame = cv2.line(frame,
-                            (int(self.leverPx.zonePoints[len(self.leverPx.zonePoints[:,0])-1,0]),int(self.leverPx.zonePoints[len(self.leverPx.zonePoints[:,0])-1,1])),
-                            (int(self.leverPx.zonePoints[0,0]),int(self.leverPx.zonePoints[0,1])),
+        
+        ## Draw the lever exitZone
+        for i in range(len(self.leverPx.exitZonePointsPlot[:,0])-1):
+            frame = cv2.line(frame,
+                            (int(self.leverPx.exitZonePointsPlot[i,0]),int(self.leverPx.exitZonePointsPlot[i,1])),
+                            (int(self.leverPx.exitZonePointsPlot[i+1,0]),int(self.leverPx.exitZonePointsPlot[i+1,1])),
                             (200,200,200),2)
         
         
@@ -1222,15 +1220,21 @@ class Trial:
         else:
             return lightEvents.param[lightEvents.time< self.startTime].tail(1).to_numpy()[0]
 
-    def trialPathFigure(self):
+    def trialPathFigure(self,pathNames = ["searchArenaNoLever","homingPeriNoLever"], legend = True, figSize=(5,5)):
         """
         Plot the path of the animal on the arena with the lever
+        
+        Argument
+            pathNames List of path names to display
+            legend Bool
+            figSize Tuple of the figure size
+        
         """
         # to plot the arena circle
         arena=np.arange(start=0,stop=2*np.pi,step=0.02)
         
         
-        fig, axes = plt.subplots(1,1,figsize=(3,3))
+        fig, axes = plt.subplots(1,1,figsize=figSize)
         plt.subplots_adjust(wspace=0.3,hspace=0.3)
 
         # plot the arena and arena periphery
@@ -1241,15 +1245,26 @@ class Trial:
         axes.set_xlabel("cm")
         axes.set_ylabel("cm")
         
-        ## mouse path
-        axes.plot(self.trialMLCm.mouseX,self.trialMLCm.mouseY)
+       
+                      
         ## lever
         axes.plot(self.leverCm.pointsPlot[:,0],self.leverCm.pointsPlot[:,1], color = "gray")
-        axes.plot(self.leverCm.zonePointsPlot[:,0],self.leverCm.zonePointsPlot[:,1], color = "gray",linestyle="dotted")
+        axes.plot(self.leverCm.enterZonePointsPlot[:,0],self.leverCm.enterZonePointsPlot[:,1], color = "gray",linestyle="dotted")
+        axes.plot(self.leverCm.exitZonePointsPlot[:,0],self.leverCm.exitZonePointsPlot[:,1], color = "yellow",linestyle="dotted")
         ## mouse position at lever presses
         if self.nLeverPresses > 0:
             axes.scatter(self.trialMLCm.mouseX[self.leverPressVideoIndex],
                          self.trialMLCm.mouseY[self.leverPressVideoIndex],color="red")
+        
+        
+         ## mouse path
+        axes.plot(self.trialMLCm.mouseX,self.trialMLCm.mouseY,color="black", label="path")
+        
+        ## add the requested path
+        for p in pathNames:
+            axes.plot(self.pathD[p].pPose[:,0],self.pathD[p].pPose[:,1],label=p)
+        
+        
         
         ## reaching periphery point
         if self.valid > 0:
@@ -1257,7 +1272,8 @@ class Trial:
             axes.scatter(self.peripheryAfterFirstLeverPressCoordCm[0],self.peripheryAfterFirstLeverPressCoordCm[1]
                      ,color="blue")
 
-                
+        if legend:
+            axes.legend(loc="upper right")
         
         
     
