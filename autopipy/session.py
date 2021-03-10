@@ -319,7 +319,25 @@ class Session:
         aList = [ trial.getSpeedProfile(pathName) for trial in self.trialList]
         self.speedProfile = np.stack(aList, axis=0)
     
-    
+    def createTrialPlots(self):
+        """
+        Create trial plots in a trialPlots directory
+        """
+        trialPlotsDir = self.path+"/trialPlots"
+        print("Saving plots in "+trialPlotsDir)
+        if not os.path.exists(trialPlotsDir) :
+            try:
+                os.mkdir(trialPlotsDir)
+            except OSError:
+                print ("Creation of the directory %s failed" % trialPlotsDir)
+                return
+            else:
+                print ("Successfully created the directory %s " % trialPlotsDir)
+        
+        for trial in self.trialList:
+            trial.trialPathFigure(filePath = "{}/{}.trial_{}.png".format(trialPlotsDir,self.name,trial.trialNo))
+                                  
+                                   
     
     def createTrialVideos(self,decorate=True):
         """
@@ -346,7 +364,7 @@ class Session:
     
     def trialPathFigure(self,fileName=None,arenaRadius = 40,arenaRadiusProportionToPeri=0.925):
         """
-        Create a figure with the trial paths. All of the trials
+        Create a single figure with all trial paths. All of the trials are put on top of each other
         
         It is a great way to double-check that the trial analysis when as expected.
         

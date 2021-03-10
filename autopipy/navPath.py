@@ -55,19 +55,29 @@ class NavPath:
             print("{} :empty NavPath created".format(self.name))
             self.length = np.NAN
             self.duration = np.NAN
+            
+            # vector analysis
+            # the vectors used in the calculation of these should probaby weighted by running speed
             self.meanVectorLengthPosi = np.NAN
             self.meanVectorDirectionPosi = np.NAN
             self.meanVectorLengthOri = np.array([np.NAN,np.NAN,np.NAN])
             self.meanVectorDirectionOri = np.array([np.NAN,np.NAN,np.NAN])
+            
             self.meanSpeed = np.NAN
             self.speedProfile = np.empty((10))
             self.speedProfile[:] = np.NAN
+            
+            # should we have a speed cutoff or weight given to speed???
             self.oriAngularDistance =  np.array([np.NAN,np.NAN,np.NAN])
             self.oriAngularSpeed = np.array([np.NAN,np.NAN,np.NAN])
             self.mvAngularDistance =  np.NAN
             self.mvAngularSpeed = np.NAN
+            
+            # vector analysis
+            # the vectors used in the calculation of these should probaby weighted by running speed
             self.medianMVDeviationToTarget=np.NAN
             self.medianHDDeviationToTarget=np.NAN
+            
             return
         
         

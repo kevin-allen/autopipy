@@ -49,16 +49,20 @@ class Lever:
         
         # we have to loop through
         for i in range(points.shape[0]):
-            if self.isAtLever : # check if animal has left
-                v = self.exitZoneLeverPath.contains_points(np.expand_dims(points[i,:],axis=0))
-                if v == False:
-                    self.isAtLever=False # mouse is not at the lever
-                res[i] = v
-            else : # check if animal has entered
-                v = self.enterZoneLeverPath.contains_points(np.expand_dims(points[i,:],axis=0))
-                if v == True:
-                    self.isAtLever=True # mouse is at the lever
-                res[i] = v
+            
+            if points[0,0] is None : # keep previous value, assumptionis that we have lost mouse tracking next or on the lever
+                res[i] = self.isAtLever
+            else:
+                if self.isAtLever : # check if animal has left
+                    v = self.exitZoneLeverPath.contains_points(np.expand_dims(points[i,:],axis=0))
+                    if v == False:
+                        self.isAtLever=False # mouse is not at the lever
+                    res[i] = v
+                else : # check if animal has entered
+                    v = self.enterZoneLeverPath.contains_points(np.expand_dims(points[i,:],axis=0))
+                    if v == True:
+                        self.isAtLever=True # mouse is at the lever
+                    res[i] = v
         return res
             
 

@@ -459,6 +459,10 @@ class Trial:
                                               (self.trialMLCm.mouseY > self.bCoordCm[0,1]) & 
                                               (self.trialMLCm.mouseY < self.bCoordCm[2,1])),
                                    "homeBase": pd.isna(self.trialMLCm.mouseX)})
+        # if there is a na but the mouse is on the lever, treat it as lever time
+        self.stateDF.homeBase[(self.stateDF.homeBase==True)&(self.stateDF.lever==True)]=False
+        
+        
         # if all false, the mouse is not on arena or bridge
         # most likely between the arena and bridge, or poking it over the edge of the arena
         self.stateDF.insert(0, "gap", self.stateDF.sum(1)==0) 
@@ -494,8 +498,6 @@ class Trial:
 
         self.nJourneys=len(self.journeyTransitionIndices)                      
         
-        
-        
         # check if the mouse found the lever and press it for each journey
         if len(self.journeyTransitionIndices) > 0:
             jt = np.append(self.journeyTransitionIndices,self.endVideoIndex) # get index for end of last journey
@@ -513,14 +515,6 @@ class Trial:
             self.journeysWithPress=self.journeyStartEndIndices.apply(jLeverPressed,  axis=1)
             
             
-            
-        
-        
-        
-        
-        
-        
-        
         ####################################################################
         ### If the lever is not detected correctly, it is possible that ####
         ### the animal is never at the lever                            ####
@@ -1220,7 +1214,7 @@ class Trial:
         else:
             return lightEvents.param[lightEvents.time< self.startTime].tail(1).to_numpy()[0]
 
-    def trialPathFigure(self,pathNames = ["searchArenaNoLever","homingPeriNoLever"], legend = True, figSize=(5,5)):
+    def trialPathFigure(self,pathNames = ["searchArenaNoLever","homingPeriNoLever"], legend = True, figSize=(10,10), filePath=None):
         """
         Plot the path of the animal on the arena with the lever
         
@@ -1239,6 +1233,7 @@ class Trial:
 
         # plot the arena and arena periphery
         axes.set_aspect('equal', adjustable='box')
+        axes.set_title("{}, {}".format(self.name,self.light))
         axes.plot(np.cos(arena)*self.arenaRadiusCm,np.sin(arena)*self.arenaRadiusCm,label="Arena",color="gray")
         axes.plot(np.cos(arena)*self.arenaRadiusCm*self.arenaRadiusProportionToPeri,
                      np.sin(arena)*self.arenaRadiusCm*self.arenaRadiusProportionToPeri,label="Periphery",color="gray",linestyle='dashed')
@@ -1262,8 +1257,12 @@ class Trial:
         
         ## add the requested path
         for p in pathNames:
-            axes.plot(self.pathD[p].pPose[:,0],self.pathD[p].pPose[:,1],label=p)
+            if self.pathD[p].pPose is not None :
+                axes.plot(self.pathD[p].pPose[:,0],self.pathD[p].pPose[:,1],label=p)
         
+        ## add a point at which the homingPeriNoLever path start
+        if self.pathD["homingPeriNoLever"].pPose is not None :
+            axes.scatter(self.pathD[p].pPose[0,0],self.pathD[p].pPose[0,1],label="homingStart")
         
         
         ## reaching periphery point
@@ -1275,8 +1274,12 @@ class Trial:
         if legend:
             axes.legend(loc="upper right")
         
-        
+        if filePath is not None:
+            print("Saving to " + filePath)
+            plt.savefig(filePath,bbox_inches = "tight")
     
+        plt.close(fig)
+        
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
