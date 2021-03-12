@@ -18,7 +18,7 @@ class Project:
         mouseNameFromSessionName()
         sessionPathFromSessionName()
     """
-    def __init__(self,name, dataPath, dlcModelPath):
+    def __init__(self,name, dataPath, dlcModelPath = None):
         self.name = name
         self.dataPath = dataPath
         self.dlcModelPath = dlcModelPath
@@ -108,3 +108,23 @@ class Project:
             self.speedProfile[k]=self.a
         
         return self.speedProfile
+
+    def getLogData(self):
+        """
+        Returns a Pandas DataFrame containing the log file of each session
+        """
+        for ses in self.sessionList :
+            ses.loadLogFile()
+            ses.logProcessing()
+        logList = [ses.log for ses in self.sessionList]
+        
+        return pd.concat(logList)
+    def getProtocolData(self):
+        """
+        Returns a Pandas DataFrame containing the protocol file of each session
+        """
+        for ses in self.sessionList :
+            ses.loadProtocolFile()
+        myList = [ses.protocol for ses in self.sessionList]
+        
+        return pd.concat(myList)

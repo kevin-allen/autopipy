@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from datetime import datetime
 from autopipy.trial import Trial
 class Session:
     """
@@ -12,7 +13,8 @@ class Session:
     Attributes:
         name: Name of the session. Usually used as the beginning of the file names
         path: Directory path of the data for this session
-        subject: Name of the subect. This assumes that the session name is in the format subject-data-time
+        subject: Name of the subect. This assumes that the session name is in the format subject-date-time
+        sessionDateTime: Datetime of the session. This assumes that the session name is in the format subject-date-time
         fileBase: path + name
         arenaTopVideo: Boolean indicating whether we should expect a video for the arnea
         homeBaseVideo:  Boolean indicating whether we should have a video of the home base
@@ -35,6 +37,7 @@ class Session:
         self.name = name
         self.path = path
         self.subject = self.name.split("-")[0]
+        self.sessionDateTime = datetime.strptime(self.name.split("-")[1]+self.name.split("-")[2], '%d%m%Y%H%M')
         self.fileBase = path+"/"+name
         self.arenaTopVideo = arenaTopVideo
         self.homeBaseVideo = homeBaseVideo
@@ -102,9 +105,45 @@ class Session:
                 raise IOError(fileName + " does not exist") # raise an exception
         return True
     
-    def loadLogFile(self):
-        self.log = pd.read_csv(self.fileNames["log"],sep=" ")
+    def loadProtocolFile(self):
+        """
+        Load the protocol file into a Pandas DataFrame and add session name, subject and datatime
+        
+        """
+        self.protocol = pd.read_csv(self.fileNames["protocol"],header = None,sep=" ", names = ["script","duration","master","ip"])
+        self.protocol["session"] = self.name
+        self.protocol["subject"] = self.subject
+        self.protocol["sessionDateTime"] = self.sessionDateTime
+        
     
+    def loadLogFile(self):
+        """
+        Load the log file into a Pandas DataFrame
+        """
+        self.log = pd.read_csv(self.fileNames["log"],sep=" ")
+        
+        # check that there is one start and end events
+        if len(self.log[self.log.event=="start"]) != 1:
+            raise RuntimeError("There should be one and only one start event in {}".format(self.fileNames["log"])) # raise an exception
+        if len(self.log[self.log.event=="end"]) != 1:
+            raise RuntimeError("There should be one and only one end event in {}".format(self.fileNames["log"])) # raise an exception
+    
+    def logProcessing(self):
+        """
+        Do 3 simple steps with the log data
+        1) remove anything before start
+        2) remove anything after end
+        3) add a time column relative to the start event
+        """
+        
+        startIndex = self.log[self.log["event"]=="start"].index.values[0]
+        endIndex = self.log[self.log["event"]=="end"].index.values[0]
+        self.log = self.log.loc[startIndex:endIndex]
+        self.log["timeWS"] = self.log["time"]-self.log.time.iloc[0]
+        self.log["session"] = self.name
+        self.log["subject"] = self.subject
+        self.log["sessionDateTime"] = self.sessionDateTime
+        
     def loadPositionTrackingData(self):
         self.mouseLeverPosi = pd.read_csv(self.fileNames["mouseLeverPosition.csv"])
         self.videoLog = pd.read_csv(self.fileNames["arena_top.log"], delimiter=" ")
@@ -154,9 +193,6 @@ class Session:
                                                                                              self.synchroMaxFrameTimeDiff,
                                                                                               self.synchroProblemTimeDiff,
                                                                                               self.synchroMeanFrameRate))
-        
-        
-        
     def fixVideoLog(self,vl):
         removeCount=0
         addCount=0
