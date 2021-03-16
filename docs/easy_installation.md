@@ -45,5 +45,10 @@ Then start the jupyter lab server.
 cd ~/repo
 jupyter lab
 ```
-
+ 
+ If you have problem loading dlc, try with dlc light. You will need to set a variable in your shell environment.
+ 
+ ```
+ os.environ['DLClight'] = 'True'
+ ```
 
