@@ -108,6 +108,7 @@ class LeverDetector(Dlc):
             print("Number of tracking points not equal to number of frames in video")
             return False
         
+        print("Saving labeled video in " + pathOutputFile)
         while(cap.isOpened() and index < numFrames ):
             ret, frame = cap.read() 
             self.detectionImage(frame,self.out[index,],self.posiOri[index,]) # will modify frame
@@ -116,7 +117,7 @@ class LeverDetector(Dlc):
         out.release()
         cap.release()
        
-    def detectionImage(self,frame,oneOut,onePosiOri):
+    def detectionImage(self,frame,oneOut,onePosiOri,detailLevel=1):
         """
         Takes an image and position data and draw the detection on the image
         The function is used when labelling videos
@@ -134,18 +135,18 @@ class LeverDetector(Dlc):
         else :
 
             frame = cv2.line(frame,(int(onePosiOri[0]),int(onePosiOri[1])),(int(onePosiOri[0]+onePosiOri[3]*2),int(onePosiOri[1]+onePosiOri[4]*2)),(255,200,0),5)
-            frame = cv2.circle(frame, (int(onePosiOri[0]),int(onePosiOri[1])), radius=4, color=(0, 255, 0), thickness=-1)
+            frame = cv2.circle(frame, (int(onePosiOri[0]),int(onePosiOri[1])), radius=2, color=(0, 255, 0), thickness=-1)
             
-            frame = cv2.circle(frame, (int(oneOut[0]),int(oneOut[1])), radius=4, color=(0, 255, 255), thickness=-1)
-            frame = cv2.circle(frame, (int(oneOut[3]),int(oneOut[4])), radius=4, color=(0, 255, 255), thickness=-1)
-            frame = cv2.circle(frame, (int(oneOut[6]),int(oneOut[7])), radius=4, color=(0, 255, 255), thickness=-1)
+            frame = cv2.circle(frame, (int(oneOut[0]),int(oneOut[1])), radius=2, color=(0, 255, 255), thickness=-1)
+            frame = cv2.circle(frame, (int(oneOut[3]),int(oneOut[4])), radius=2, color=(0, 255, 255), thickness=-1)
+            frame = cv2.circle(frame, (int(oneOut[6]),int(oneOut[7])), radius=2, color=(0, 255, 255), thickness=-1)
             
-                   
-            frame = cv2.putText(frame, "{:.1f}".format(onePosiOri[2]), (50,50), cv2.FONT_HERSHEY_SIMPLEX ,  
-                                                 1, (100,200,0), 2, cv2.LINE_AA) 
-            frame = cv2.putText(frame, "{:.1f} {:.1f}".format(onePosiOri[0],onePosiOri[1]), (50,100), cv2.FONT_HERSHEY_SIMPLEX ,  
-                                                 1, (100,200,0), 2, cv2.LINE_AA)
-           
+            if detailLevel > 1:
+                frame = cv2.putText(frame, "{:.1f}".format(onePosiOri[2]), (50,50), cv2.FONT_HERSHEY_SIMPLEX ,  
+                                                     1, (100,200,0), 2, cv2.LINE_AA) 
+                frame = cv2.putText(frame, "{:.1f} {:.1f}".format(onePosiOri[0],onePosiOri[1]), (50,100), cv2.FONT_HERSHEY_SIMPLEX ,  
+                                                     1, (100,200,0), 2, cv2.LINE_AA)
+
         
     def positionOrientationOneFrame(self,frameTrackingData,probThreshold = 0.5):
         """

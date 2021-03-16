@@ -731,7 +731,13 @@ class Trial:
         """
         return self.trialVideoLog.frame_number.iloc[np.argmin(np.abs(self.trialVideoLog.time - timeStamp))]  
         
-    def createTrialVideo(self,pathVideoFile,pathVideoFileOut,decorate=True):
+    def createTrialVideo(self,pathVideoFile,pathVideoFileOut,decorate=True,detailLevel=1):
+        """
+        Generate a trial video with annotation
+        
+        
+        
+        """
         
         if not os.path.isfile(pathVideoFile):
             print(pathVideoFile + " does not exist")
@@ -801,7 +807,7 @@ class Trial:
         for i in range(self.startVideoIndex,self.endVideoIndex+1):
             ret, frame = cap.read()
             if decorate:
-                frame = self.decorateVideoFrame(frame,i,count,maskDict)
+                frame = self.decorateVideoFrame(frame,i,count,maskDict,detailLevel)
             
             out.write(frame)
             count=count+1
@@ -810,10 +816,17 @@ class Trial:
         cap.release() 
     
     
-    def decorateVideoFrame(self,frame,index,count,maskDict):
+    def decorateVideoFrame(self,frame,index,count,maskDict,detailLevel=2):
         """
         Function to add information to the trial video
         For example, we can plot the path and other varialbes
+        
+        Arguments:
+            frame: the video frame
+            index: index of the frame
+            count: count of the frame
+            maskDict: dictionary containing the mask for the different paths
+            detailLevel: define how much information is displayed on the frame; 0= minimal, 1 = some details, 2 = all information
         
         """
         
@@ -852,132 +865,170 @@ class Trial:
         # first colum of variables #
         ############################
         # trial time
-        frame = cv2.putText(frame, 
-                            "Time: {:.1f} sec, {:.1f}".format(self.trialVideoLog.timeWS.iloc[count],self.startTimeWS + self.trialVideoLog.timeWS.iloc[count] ), 
-                            (30,20), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA)
+        if detailLevel < 2 :
+            frame = cv2.putText(frame, 
+                                "Time: {:.1f} sec".format(self.trialVideoLog.timeWS.iloc[count]), 
+                                (30,20), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA)
+        else :
+            frame = cv2.putText(frame, 
+                    "Time: {:.1f} sec, {:.1f}".format(self.trialVideoLog.timeWS.iloc[count],self.startTimeWS + self.trialVideoLog.timeWS.iloc[count] ), 
+                    (30,20), 
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5, (100,200,0), 1, cv2.LINE_AA)
+
+            
         # traveled distance
-        frame = cv2.putText(frame, 
-                            "Distance: {:.1f} cm".format(self.pathDF.traveledDistance[index]), 
-                            (30,50), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA)
-        # speed
-        frame = cv2.putText(frame, 
-                            "Speed: {:.0f} cm/sec".format(self.pathDF.speedNoNAN[index]), 
-                            (30,80), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA)       
-        # distance to lever
-        frame = cv2.putText(frame, 
-                            "Distance lever center: {:.1f} cm".format(self.pathDF.distanceFromLever[index]), 
-                            (30,110), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA)       
-        # Angle between mouse head and the bridge
-        frame = cv2.putText(frame, 
-                            "MvHead: {:.0f} deg".format(self.pathDF.mvHeading[index]), 
-                            (30,140), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA) 
-        
-        # Head direction of the mouse
-        frame = cv2.putText(frame, 
-                            "HD: {:.0f} deg".format(self.trialMLPx.mouseOri[index]), 
-                            (30,170), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA) 
-        
-        # mouse head to bridge vector
-        frame = cv2.putText(frame, 
-                            "toBridge: {:.0f} {:.0f}".format(self.pathDF.mouseToBridgeXCm[index],self.pathDF.mouseToBridgeYCm[index]), 
-                            (30,200), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA) 
-        
-        
-        # Angle between mouse movement heading and vector from mouse to the bridge
-        frame = cv2.putText(frame, 
-                            "mvHeadToBridge : {:.0f} deg".format(self.pathDF.mvHeadingToBridgeAngle[index]), 
-                            (30,230), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA) 
-        # Angle between head direction and bridge
-        frame = cv2.putText(frame, 
-                            "hdToBridge : {:.0f} deg".format(self.pathDF.hdToBridgeAngle[index]), 
-                            (30,260), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA) 
-        # Lever orientation
-        frame = cv2.putText(frame, 
-                            "lever ori : {:.0f} deg".format(self.trialMLPx.leverOri[index]), 
-                            (30,290), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA) 
-        
-        # Angle between mouse periphery after lever, arena center and bridge
-        if self.valid:
-            if index > self.peripheryAfterFirstLeverPressVideoIndex :
+        if detailLevel > 0:
+            frame = cv2.putText(frame, 
+                                "Distance: {:.1f} cm".format(self.pathDF.traveledDistance[index]), 
+                                (30,50), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA)
+            # speed
+            frame = cv2.putText(frame, 
+                                "Speed: {:.0f} cm/sec".format(self.pathDF.speedNoNAN[index]), 
+                                (30,80), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA)       
+
+            # Head direction of the mouse
+            if ~np.isnan(self.trialMLPx.mouseOri[index]):
                 frame = cv2.putText(frame, 
-                                    "Peri error: {:.0f} deg".format(self.periArenaCenterBridgeAngle[0]), 
-                                    (30,320), 
+                                    "HD: {:.0f} deg".format(self.trialMLPx.mouseOri[index]), 
+                                    (30,110), 
                                     cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.5, (100,200,0), 1, cv2.LINE_AA)
+                                    0.5, (100,200,0), 1, cv2.LINE_AA) 
+            else:
+                frame = cv2.putText(frame, 
+                                    "HD: ", 
+                                    (30,110), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA) 
+
+            # Angle between head direction and bridge
+            if ~np.isnan(self.pathDF.hdToBridgeAngle[index]):
+                frame = cv2.putText(frame, 
+                                    "hdToBridge : {:.0f} deg".format(self.pathDF.hdToBridgeAngle[index]), 
+                                    (30,140), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA) 
+            else :
+                frame = cv2.putText(frame, 
+                                    "hdToBridge : ", 
+                                    (30,140), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA) 
+
+            # Angle between mouse movement heading and vector from mouse to the bridge
+            if ~np.isnan(self.pathDF.mvHeadingToBridgeAngle[index]):
+                frame = cv2.putText(frame, 
+                                    "mvHeadToBridge : {:.0f} deg".format(self.pathDF.mvHeadingToBridgeAngle[index]), 
+                                    (30,170), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA) 
+            else :
+                frame = cv2.putText(frame, 
+                                    "mvHeadToBridge : ", 
+                                    (30,170), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA) 
+
+        if detailLevel > 1 :
         
+            # distance to lever
+            frame = cv2.putText(frame, 
+                                "Distance lever center: {:.1f} cm".format(self.pathDF.distanceFromLever[index]), 
+                                (30,200), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA)       
+            # mv heading
+            frame = cv2.putText(frame, 
+                                "MvHead: {:.0f} deg".format(self.pathDF.mvHeading[index]), 
+                                (30,230), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA) 
+
+            # mouse head to bridge vector
+            frame = cv2.putText(frame, 
+                                "toBridge: {:.0f} {:.0f}".format(self.pathDF.mouseToBridgeXCm[index],self.pathDF.mouseToBridgeYCm[index]), 
+                                (30,260), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA) 
+
+
+            # Lever orientation
+            frame = cv2.putText(frame, 
+                                "lever ori : {:.0f} deg".format(self.trialMLPx.leverOri[index]), 
+                                (30,290), 
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (100,200,0), 1, cv2.LINE_AA) 
+        
+            # Angle between mouse periphery after lever, arena center and bridge
+            if self.valid:
+                if index > self.peripheryAfterFirstLeverPressVideoIndex :
+                    frame = cv2.putText(frame, 
+                                        "Peri error: {:.0f} deg".format(self.periArenaCenterBridgeAngle[0]), 
+                                        (30,320), 
+                                        cv2.FONT_HERSHEY_SIMPLEX,
+                                        0.5, (100,200,0), 1, cv2.LINE_AA)
+
         
         #################
         ## second column
         ##################
-        # Light condition
-        frame = cv2.putText(frame, 
-                            "Light cond.: {}".format(self.light), 
-                            (frame.shape[1]-200,20), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA)
-        
-        # Location as a categorical variable
-        frame = cv2.putText(frame, 
-                            "Loca: {}".format(self.stateDF.loca[index]), 
-                            (frame.shape[1]-200,50), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA)
-        # journey (from bridge to arenaCenter)
-        if(np.sum(index>self.journeyTransitionIndices)>0):
+        if detailLevel > 0:
+            # Light condition
             frame = cv2.putText(frame, 
-                                "Journey {}/{}, l:{}, p:{}".format(np.sum(index>self.journeyTransitionIndices),self.nJourneys,
-                                                                                   int(self.journeysAtLever.iloc[np.sum(self.journeyTransitionIndices<index)-1]),
-                                                                                   int(self.journeysWithPress.iloc[np.sum(self.journeyTransitionIndices<index)-1])
-                                                                                  ), 
-                                (frame.shape[1]-200,80), 
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5, (100,200,0), 1, cv2.LINE_AA)
-        else:
-            frame = cv2.putText(frame, 
-                                "{} journeys".format(self.nJourneys), 
-                                (frame.shape[1]-200,80), 
+                                "Light cond.: {}".format(self.light), 
+                                (frame.shape[1]-200,20), 
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 0.5, (100,200,0), 1, cv2.LINE_AA)
 
-        # lever presses
-        if self.nLeverPresses > 0 :
+            # Location as a categorical variable
             frame = cv2.putText(frame, 
-                                "Lever presse {} of {}".format(np.sum(index>self.leverPress.videoIndex),len(self.leverPress.videoIndex)), 
-                                (frame.shape[1]-200,110), 
+                                "Loca: {}".format(self.stateDF.loca[index]), 
+                                (frame.shape[1]-200,50), 
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 0.5, (100,200,0), 1, cv2.LINE_AA)
-        else : 
+            # journey (from bridge to arenaCenter)
+            if(np.sum(index>self.journeyTransitionIndices)>0):
+                frame = cv2.putText(frame, 
+                                    "Journey {}/{}, l:{}, p:{}".format(np.sum(index>self.journeyTransitionIndices),self.nJourneys,
+                                                                                       int(self.journeysAtLever.iloc[np.sum(self.journeyTransitionIndices<index)-1]),
+                                                                                       int(self.journeysWithPress.iloc[np.sum(self.journeyTransitionIndices<index)-1])
+                                                                                      ), 
+                                    (frame.shape[1]-200,80), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA)
+            else:
+                frame = cv2.putText(frame, 
+                                    "{} journeys".format(self.nJourneys), 
+                                    (frame.shape[1]-200,80), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA)
+
+            # lever presses
+            if self.nLeverPresses > 0 :
+                frame = cv2.putText(frame, 
+                                    "Lever presse {} of {}".format(np.sum(index>self.leverPress.videoIndex),len(self.leverPress.videoIndex)), 
+                                    (frame.shape[1]-200,110), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA)
+            else : 
+                frame = cv2.putText(frame, 
+                                    "Trial without lever press", 
+                                    (frame.shape[1]-200,110), 
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.5, (100,200,0), 1, cv2.LINE_AA)
+        if detailLevel > 1:
             frame = cv2.putText(frame, 
-                                "Trial without lever press", 
-                                (frame.shape[1]-200,110), 
+                                "Valid trial: {}".format(self.valid), 
+                                (frame.shape[1]-200,140), 
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 0.5, (100,200,0), 1, cv2.LINE_AA)
-        frame = cv2.putText(frame, 
-                            "Valid trial: {}".format(self.valid), 
-                            (frame.shape[1]-200,140), 
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (100,200,0), 1, cv2.LINE_AA)
-            
+
             
         ###################################
         ### mask operations for the path ##
@@ -1040,25 +1091,30 @@ class Trial:
         #######################################
         # mouse orientaiton (head-direction) line
         if ~np.isnan(self.trialMLPx.loc[index,"mouseX"]):
-            frame = cv2.line(frame,
-                             (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
-                             (int(self.trialMLPx.loc[index,"mouseX"]+self.trialMLPx.loc[index,"mouseXHeading"]*2),
-                              int(self.trialMLPx.loc[index,"mouseY"]+self.trialMLPx.loc[index,"mouseYHeading"]*2)),
-                            (0,200,255),2)
             # mouse position dot
             frame = cv2.circle(frame,
                                (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                     radius=4, color=(0, 200, 255), thickness=1)
+            # vector from mouse head in the HD
+            if detailLevel > 0:
+                frame = cv2.line(frame,
+                                 (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
+                                 (int(self.trialMLPx.loc[index,"mouseX"]+self.trialMLPx.loc[index,"mouseXHeading"]*2),
+                                  int(self.trialMLPx.loc[index,"mouseY"]+self.trialMLPx.loc[index,"mouseYHeading"]*2)),
+                                (0,200,255),2)
+
             # head to bridge vector
-            frame = cv2.line(frame,
-                             (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
-                             (int(self.trialMLPx.loc[index,"mouseX"]+self.pathDF.loc[index,"mouseToBridgeXPx"]),
-                              int(self.trialMLPx.loc[index,"mouseY"]+self.pathDF.loc[index,"mouseToBridgeYPx"])),
-                            (100,255,255),2)
+            if detailLevel > 0:
+                frame = cv2.line(frame,
+                                 (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
+                                 (int(self.trialMLPx.loc[index,"mouseX"]+self.pathDF.loc[index,"mouseToBridgeXPx"]),
+                                  int(self.trialMLPx.loc[index,"mouseY"]+self.pathDF.loc[index,"mouseToBridgeYPx"])),
+                                (100,255,255),2)
         
         
         #######################################
         # add lever position and orientation ##
+        # detection points                   ##
         #######################################
         # lever orientaiton line
         if ~np.isnan(self.trialMLPx.loc[index,"leverX"]) :
@@ -1087,11 +1143,6 @@ class Trial:
                                 radius=4, color=(0, 255, 150), thickness=2)
             
             
-            
-            
-            
-        
-        
         # add lever presses as red dots at the center of the lever
         if (self.leverPress.videoIndex==index).sum() == 1 and ~np.isnan(self.trialMLPx.loc[index,"leverX"]) :
              frame = cv2.circle(frame,
@@ -1127,7 +1178,9 @@ class Trial:
         frame = cv2.circle(frame,
                                 (int(self.aCoordPx[0]),int(self.aCoordPx[1])),
                                 radius=int(self.radiusPeripheryPx), color=(50, 50, 50), thickness=1)
-                
+        ###########
+        ## lever ##
+        ###########
         ## Draw the lever, 
         for i in range(len(self.leverPx.pointsPlot[:,0])-1):
             frame = cv2.line(frame,
@@ -1137,19 +1190,21 @@ class Trial:
         
         
         ## Draw the lever enterZone
-        for i in range(len(self.leverPx.enterZonePointsPlot[:,0])-1):
-            frame = cv2.line(frame,
-                            (int(self.leverPx.enterZonePointsPlot[i,0]),int(self.leverPx.enterZonePointsPlot[i,1])),
-                            (int(self.leverPx.enterZonePointsPlot[i+1,0]),int(self.leverPx.enterZonePointsPlot[i+1,1])),
-                            (200,200,200),2)
-        
+        if detailLevel > 0:
+            for i in range(len(self.leverPx.enterZonePointsPlot[:,0])-1):
+                frame = cv2.line(frame,
+                                (int(self.leverPx.enterZonePointsPlot[i,0]),int(self.leverPx.enterZonePointsPlot[i,1])),
+                                (int(self.leverPx.enterZonePointsPlot[i+1,0]),int(self.leverPx.enterZonePointsPlot[i+1,1])),
+                                (200,200,200),2)
+
         ## Draw the lever exitZone
-        for i in range(len(self.leverPx.exitZonePointsPlot[:,0])-1):
-            frame = cv2.line(frame,
-                            (int(self.leverPx.exitZonePointsPlot[i,0]),int(self.leverPx.exitZonePointsPlot[i,1])),
-                            (int(self.leverPx.exitZonePointsPlot[i+1,0]),int(self.leverPx.exitZonePointsPlot[i+1,1])),
-                            (200,200,200),2)
-        
+        if detailLevel > 1:
+            for i in range(len(self.leverPx.exitZonePointsPlot[:,0])-1):
+                frame = cv2.line(frame,
+                                (int(self.leverPx.exitZonePointsPlot[i,0]),int(self.leverPx.exitZonePointsPlot[i,1])),
+                                (int(self.leverPx.exitZonePointsPlot[i+1,0]),int(self.leverPx.exitZonePointsPlot[i+1,1])),
+                                (200,200,200),2)
+
         
         self.frame = frame
        
