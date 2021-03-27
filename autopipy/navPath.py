@@ -48,11 +48,11 @@ class NavPath:
             print("{} :pPose should have 7 columns [x, y, z, yaw, pitch, roll, time]".format(self.name))
             self.pPose = None
         if self.pPose.shape[0] < 2 :  
-            print("{} :pPose has a length of {}".format(self.name,self.pPose.shape[0]))
+            #print("{} :pPose has a length of {}".format(self.name,self.pPose.shape[0]))
             self.pPose = None
         
         if self.pPose is None :
-            print("{} :empty NavPath created".format(self.name))
+            #print("{} :empty NavPath created".format(self.name))
             self.length = np.NAN
             self.duration = np.NAN
             
