@@ -26,6 +26,10 @@ class Trial:
     When not explicitely specified, the values are in cm
     Note that the transformation between pixels to cm representation involve a translation to shift the origin to the center of the arena
     
+    Contains a list of Journeys (exploratory episode on the arena)
+    
+    The Trial class has a pathD (dictionary of NavPath) which is just copied from the journey with the first lever press.
+    
     
      
     Attributes:
@@ -34,6 +38,7 @@ class Trial:
         trialNo: Trial number within the session
         startTime: start time of the trial
         endTime: end time of the trial
+        journeyList: list of Journey object
         ...
     
     Methods:
@@ -116,6 +121,10 @@ class Trial:
         self.homingPeriNoLeverStartIndex = None
         self.homingPeriNoLeverEndIndex = None
         self.peripheryAfterFirstLeverPressVideoIndex = None
+        self.periArenaCenterBridgeAngle=None
+        
+        self.pathD = {} # inherited from the first journey with lever press
+        
         
     def getTrialVariables(self):
         """
@@ -151,7 +160,7 @@ class Trial:
                        "peripheryAfterFirstLeverPressX" : [self.peripheryAfterFirstLeverPressCoordCm[0]],
                        "peripheryAfterFirstLeverPressY" : [self.peripheryAfterFirstLeverPressCoordCm[1]],
                        "peripheryAfterFirstLeverPressAngle" : [self.peripheryAfterFirstLeverPressAngle],
-                       "angularErrorHomingPeri" : self.periArenaCenterBridgeAngle,
+                       "angularErrorHomingPeri" : [self.periArenaCenterBridgeAngle],
                       
                       
                        # total time at different locations
@@ -163,9 +172,7 @@ class Trial:
                        "timeLever" : self.stateTime["lever"]}
         df = pd.DataFrame(self.myDict)
         
-        # return the values of the last journey
-        j = self.journeyList[-1]
-        for k in j.pathD :
+        for k in self.pathD :
             myDf = j.pathD[k].getVariables() # get a df from the NavPath
             myDf = myDf.add_prefix(k+"_") # add a prefix to the column name
             df = pd.concat([df, myDf.reindex(df.index)], axis=1) # join the NavPat df to the trial df
@@ -503,6 +510,28 @@ class Trial:
             print("{}, self.valid set to False".format(self.name))
             self.valid=False
         
+        ###############################################################
+        ### There should be some arena center before the lever press ##
+        ###############################################################
+        if self.nLeverPresses > 0:
+            if all(self.stateDF.loca.loc[self.startVideoIndex : self.leverPress.videoIndex.iloc[0]]!="arenaCenter"):
+                print("{}, no time on the arenaCenter before lever press".format(self.name))
+                print("{}, self.valid set to False".format(self.name))
+                self.valid=False
+
+        ############################################################
+        ### There should be some arena data after the lever press ##
+        ############################################################
+        if self.nLeverPresses > 0 :
+            
+            if (np.sum(self.stateDF.loca.loc[self.leverPress.videoIndex.iloc[0]:self.endVideoIndex]=="arena")+
+             np.sum(self.stateDF.loca.loc[self.leverPress.videoIndex.iloc[0]:self.endVideoIndex]=="arenaCenter"))==0:
+                print("{}, There is no arena time after the lever press in the trial".format(self.name))
+                print("{}, self.valid set to False".format(self.name))
+                self.valid=False
+        
+        
+        
            
         ######################################################################
         ## JOURNEYS BOUNDARIES                                              ##
@@ -512,7 +541,7 @@ class Trial:
         df = pd.DataFrame({"start" : bridgeArenaCenter.shift().loca,"end" : bridgeArenaCenter.loca})
         self.journeyTransitionIndices = df[(df.start=="bridge") & (df.end=="arenaCenter")].index.values - 1 # - 1 because of the shift
         
-        ## if the mouse first appeared as it is on the arena at the beginning of the trial, add one journey starting at the first arena 
+        ## if the mouse first appeared as it was on the arena at the beginning of the trial, add one journey starting at the first arena 
         if np.sum(df.end=="arenaCenter")>0:
             if np.sum(df.start=="bridge")==0:
                 print("{}, no bridge time in the trial".format(self.name))
@@ -533,11 +562,28 @@ class Trial:
             # dataframe with start and end indices for each journey
             self.journeyStartEndIndices = pd.DataFrame({"start" : jt[0:-1], "end" : jt[1:]-1})
             
-        self.journeyList = []  
+        self.journeyList = []
+                
         #################################
         ## create a list of journeys   ##
         #################################
         if self.valid : # we don't want to analyze trials without lever press
+            
+            #######################################################
+            ## don't start new journeys after first lever presse ##
+            #######################################################
+            if any(self.journeyStartEndIndices["start"] > self.leverPress.videoIndex.iloc[0]):
+                print("There is a journey starting after the first lever press")
+                # get the last end
+                print(self.journeyStartEndIndices)
+                print(self.leverPress)
+                lastEnd=self.journeyStartEndIndices["end"].iloc[-1]
+                print("lastEnd: {}".format(lastEnd))
+                # remove the last journey
+                self.journeyStartEndIndices = self.journeyStartEndIndices.iloc[:-1,:]
+                # reset the end of the new last journey
+                self.journeyStartEndIndices["end"].iloc[-1] =lastEnd
+
             
             for j in range(len(self.journeyStartEndIndices)):
                 self.journeyList.append(Journey(self.sessionName,self.trialNo,j+1,
@@ -592,7 +638,7 @@ class Trial:
             # this will give us the required journey.pathD needed to return trial variables even if the trial is invalid
             emptyLeverPress = pd.DataFrame({"time": [],
                                         "videoIndex": []})
-            self.journeyList.append(Journey(self.sessionName,self.trialNo,j+1,
+            self.journeyList.append(Journey(self.sessionName,self.trialNo,1,
                                             self.startVideoIndex,self.endVideoIndex,
                                             self.leverCm, 
                                             self.arenaRadiusCm, 
@@ -608,7 +654,15 @@ class Trial:
         self.journeysAtLever=np.sum([j.atLever for j in self.journeyList])
         self.journeysWithPress=np.sum([j.leverPressed for j in self.journeyList])
         self.nJourneys = len(self.journeyList)
-        
+            
+        ## set trial.pathD to the journey.pathD with the first lever press
+        ## makes it easier to access
+        jList = [j for j in self.journeyList if j.leverPressed]
+        if len(jList) > 0:
+            j = jList[0]
+        else :
+            j = self.journeyList[-1]
+        self.pathD = j.pathD
     
     
     def videoIndexFromTimeStamp(self, timeStamp):
@@ -926,30 +980,31 @@ class Trial:
             
             if self.valid :
                 # draw the search path into the specific mask
-                # use the last journey of the trial
-                j = self.journeyList[-1]
-                if index >= j.searchTotalStartIndex and index <= j.searchTotalEndIndex:
+                             
+                
+                
+                if index >= self.pathD.searchTotalStartIndex and index <= self.pathD.searchTotalEndIndex:
                     maskDict["maskSearchTotal"] = cv2.circle(maskDict["maskSearchTotal"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
-                if index >= j.searchArenaStartIndex and index <= j.searchArenaEndIndex:
+                if index >= self.pathD.searchArenaStartIndex and index <= self.pathD.searchArenaEndIndex:
                     maskDict["masksearchArena"] = cv2.circle(maskDict["masksearchArena"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
-                if index >= j.searchArenaNoLeverStartIndex and index <= j.searchArenaNoLeverEndIndex:
+                if index >= self.pathD.searchArenaNoLeverStartIndex and index <= self.pathD.searchArenaNoLeverEndIndex:
                     maskDict["masksearchArenaNoLever"] = cv2.circle(maskDict["masksearchArenaNoLever"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
 
-                if index >= j.homingTotalStartIndex and index <= j.homingTotalEndIndex:
+                if index >= self.pathD.homingTotalStartIndex and index <= self.pathD.homingTotalEndIndex:
                     maskDict["maskHomingTotal"] = cv2.circle(maskDict["maskHomingTotal"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
-                if index >= j.homingPeriStartIndex and index <= j.homingPeriEndIndex:
+                if index >= self.pathD.homingPeriStartIndex and index <= self.pathD.homingPeriEndIndex:
                     maskDict["maskHomingPeri"] = cv2.circle(maskDict["maskHomingPeri"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
-                if index >= j.homingPeriNoLeverStartIndex and index <= j.homingPeriNoLeverEndIndex:
+                if index >= self.pathD.homingPeriNoLeverStartIndex and index <= self.pathD.homingPeriNoLeverEndIndex:
                     maskDict["maskHomingPeriNoLever"] = cv2.circle(maskDict["maskHomingPeriNoLever"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
@@ -1197,15 +1252,16 @@ class Trial:
         axes.plot(self.trialMLCm.mouseX,self.trialMLCm.mouseY,color="black", label="path")
         
         ## add the requested path, taken from the last journey
-        j = self.journeyList[-1]
+
         for p in pathNames:
-            if j.pathD[p].pPose is not None :
-                axes.plot(j.pathD[p].pPose[:,0],j.pathD[p].pPose[:,1],label=p)
+            if self.pathD[p].pPose is not None :
+                axes.plot(self.pathD[p].pPose[:,0],
+                          self.pathD[p].pPose[:,1],label=p)
         
         ## add a point at which the homingPeriNoLever path start
-        if j.pathD["homingPeriNoLever"].pPose is not None :
-            axes.scatter(j.pathD["homingPeriNoLever"].pPose[0,0],
-                         j.pathD["homingPeriNoLever"].pPose[0,1],label="homingStart")
+        if self.pathD["homingPeriNoLever"].pPose is not None :
+            axes.scatter(self.pathD["homingPeriNoLever"].pPose[0,0],
+                         self.pathD["homingPeriNoLever"].pPose[0,1],label="homingStart")
         
         
         ## reaching periphery point
@@ -1221,7 +1277,7 @@ class Trial:
             print("Saving to " + filePath)
             plt.savefig(filePath,bbox_inches = "tight")
     
-        plt.close(fig)
+        #plt.close(fig)
         
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))

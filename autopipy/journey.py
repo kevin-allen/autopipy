@@ -12,11 +12,14 @@ class Journey:
     """
     Class containing information about a single journey on the Autopi task.
     
-    This is used to analyze all the different journeys of a trial while keeping the trial class relatively simple
+    This is used to analyze all journeys of a trial while keeping the trial class relatively simple
     
     Work with data that are in cm, if you want the output in cm!
      
-     
+    It contains a dictionary of NavPath objects (pathD). 
+    
+    We develop this class because we might want to consider the mouse behavior during all journeys, not just during the journeys when the lever was pressed.
+    
     Attributes:
         name: Name of the trial, usually sessionName_trialNo-JourneyNo
         sessionName: Name of the session in which the trial was performed
@@ -70,7 +73,7 @@ class Journey:
         self.nLeverPresses = len(self.leverPress)
         self.leverPressed = self.nLeverPresses>0
         
-        #print("atLever: {}, nLeverPressed: {}, leverPressed: {}".format(self.atLever, self.nLeverPresses, self.leverPressed))
+        #print("name {}, atLever: {}, nLeverPressed: {}, leverPressed: {}".format(self.name, self.atLever, self.nLeverPresses, self.leverPressed))
         
        
         ### we now get the start and end indices to create the NavPath objects
