@@ -189,7 +189,7 @@ class Journey:
             bridgePose = self.poseFromBridgeCoordinates()
             
             # get the path variables using the NavPath class
-            self.pathD["allPose"] = NavPath(pPose = allPose,name = "all")
+            self.pathD["all"] = NavPath(pPose = allPose,name = "all")
             self.pathD["searchTotal"] = NavPath(pPose = searchTotalPose,
                                               targetPose=leverPose,name = "searchTotal")
             self.pathD["searchArena"] =  NavPath(pPose = searchArenaPose,
@@ -207,7 +207,7 @@ class Journey:
             # we need a single NavPath object to know how long the trajectory was
             allPose =  self.poseFromTrialData(self.startIndex,
                                                      self.endIndex)
-            self.pathD["allPose"] = NavPath(pPose = allPose,name = "all")
+            self.pathD["all"] = NavPath(pPose = allPose,name = "all")
             ## create empty NavPath so that all journeys have the same content
             self.pathD["searchTotal"] = NavPath(pPose = np.empty((1,7)),name = "searchTotal")
             self.pathD["searchArena"] =  NavPath(pPose =  np.empty((1,7)), name = "searchArena")
