@@ -173,7 +173,7 @@ class Trial:
         df = pd.DataFrame(self.myDict)
         
         for k in self.pathD :
-            myDf = j.pathD[k].getVariables() # get a df from the NavPath
+            myDf = self.pathD[k].getVariables() # get a df from the NavPath
             myDf = myDf.add_prefix(k+"_") # add a prefix to the column name
             df = pd.concat([df, myDf.reindex(df.index)], axis=1) # join the NavPat df to the trial df
                 
@@ -410,8 +410,6 @@ class Trial:
         mouseToBridgePx = np.stack((mBVXPx,mBVYPx),axis = 1)
         
         
-        
-       
         ## angle between movement heading and vector from the mouse to the bridge
         mvHeadingToBridgeAngle = self.vectorAngle(mv,mouseToBridgeCm,degrees=True)
         ## angle between head direction and vector from the mouse to the bridge
@@ -537,8 +535,11 @@ class Trial:
         ## JOURNEYS BOUNDARIES                                              ##
         ## number of journeys on the arena (from the bridge to arena center)##
         ######################################################################
+        # only keep bridge and arenaCenter state
         bridgeArenaCenter = self.stateDF[ (self.stateDF.loca=="bridge") | (self.stateDF.loca=="arenaCenter") ]
+        # get a df to look for bridge to arenaCenter transition
         df = pd.DataFrame({"start" : bridgeArenaCenter.shift().loca,"end" : bridgeArenaCenter.loca})
+        # start of journey is when the animal leaves the bridge to go on the arena to explore the center
         self.journeyTransitionIndices = df[(df.start=="bridge") & (df.end=="arenaCenter")].index.values - 1 # - 1 because of the shift
         
         ## if the mouse first appeared as it was on the arena at the beginning of the trial, add one journey starting at the first arena 
@@ -570,7 +571,7 @@ class Trial:
         if self.valid : # we don't want to analyze trials without lever press
             
             #######################################################
-            ## don't start new journeys after first lever presse ##
+            ## don't start new journeys after first lever press  ##
             #######################################################
             if any(self.journeyStartEndIndices["start"] > self.leverPress.videoIndex.iloc[0]):
                 print("There is a journey starting after the first lever press")
@@ -584,7 +585,9 @@ class Trial:
                 # reset the end of the new last journey
                 self.journeyStartEndIndices["end"].iloc[-1] =lastEnd
 
-            
+            ####################################
+            ## create the journey list here  ###
+            ####################################
             for j in range(len(self.journeyStartEndIndices)):
                 self.journeyList.append(Journey(self.sessionName,self.trialNo,j+1,
                                                self.journeyStartEndIndices["start"][j],self.journeyStartEndIndices["end"][j],
