@@ -172,6 +172,7 @@ class Trial:
                        "timeLever" : self.stateTime["lever"]}
         df = pd.DataFrame(self.myDict)
         
+        # self.pathD is the first journey with the lever press.
         for k in self.pathD :
             myDf = self.pathD[k].getVariables() # get a df from the NavPath
             myDf = myDf.add_prefix(k+"_") # add a prefix to the column name
@@ -199,6 +200,41 @@ class Trial:
         dfm = pd.concat([df1,df2,df3,df4],axis=1) # remerge
         return dfm
     
+    def addHomingPathOtherTrial(self,otherTrial):
+        """
+        Function to add an additional homing path to the last journey of the trial.
+        
+        This can be used to compare the homing performance on the current trial and the performance obtained if the mouse used the homing path of a different trial. 
+        
+        The homing path of the other trial is translated by the difference in lever position between 
+        the current trial and the other trial.
+        
+        Argument:
+        otherTrial: Trial object from which we will get the homing path
+        
+        """
+        lastJ=self.journeyList[-1]
+        otherLastJ = otherTrial.journeyList[-1]
+    
+        # difference between lever position of this trial and that of the other trial
+        # (the target of the searchArena NavPath is the center of the lever)
+        targetDiff = otherLastJ.pathD["searchArena"].targetPose[:3]-lastJ.pathD["searchArena"].targetPose[:3]
+        shiftedHoming = otherLastJ.pathD["homingPeriNoLever"].pPose.copy()
+        shiftedHoming[:,:3] = otherLastJ.pathD["homingPeriNoLever"].pPose[:,:3]-targetDiff[:,:3] # translate, do not touch the orientation data
+
+        ###########################################################################
+        # remove the part of the shifted path after the first point at periphery ##
+        ###########################################################################
+        dist = np.sqrt(np.sum(shiftedHoming[:,0:3]**2,axis=1))
+        peri = self.arenaRadiusCm*self.arenaRadiusProportionToPeri
+        shiftedHoming = shiftedHoming[dist<peri]
+
+        ## create a new NavPath with the shifted homing path and get medianMVDeviationToTarget
+        ## add this path to the last journey path dictionary
+        lastJ.pathD["alternativeHomingPeriNoLever"] = NavPath(pPose=shiftedHoming,
+                                                       targetPose=lastJ.pathD["homingPeriNoLever"].targetPose,
+                                                       name="alternativeHomingPeriNoLever")
+    
     def extractTrialFeatures(self,log=None,mLPosi=None,videoLog=None,aCoord=None,bCoord=None,
                              arenaRadiusProportionToPeri=0.925, printName = False, arenaRadiusCm=40):
         """
@@ -225,7 +261,7 @@ class Trial:
         if bCoord is None:
             raise TypeError("bCoord is None")
            
-        
+        print("trial feature extraction")
         ##############################################
         ### get data to transform from pixels to cm ##
         ##############################################
@@ -668,6 +704,11 @@ class Trial:
         self.pathD = j.pathD
     
     
+   
+    
+    
+    
+    
     def videoIndexFromTimeStamp(self, timeStamp):
         """
         Get the frame or index in the video for a given timestamp (event)
@@ -984,30 +1025,30 @@ class Trial:
             if self.valid :
                 # draw the search path into the specific mask
                              
+                j = self.journeyList[-1]
                 
-                
-                if index >= self.pathD.searchTotalStartIndex and index <= self.pathD.searchTotalEndIndex:
+                if index >= j.searchTotalStartIndex and index <= j.searchTotalEndIndex:
                     maskDict["maskSearchTotal"] = cv2.circle(maskDict["maskSearchTotal"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
-                if index >= self.pathD.searchArenaStartIndex and index <= self.pathD.searchArenaEndIndex:
+                if index >= j.searchArenaStartIndex and index <= j.searchArenaEndIndex:
                     maskDict["masksearchArena"] = cv2.circle(maskDict["masksearchArena"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
-                if index >= self.pathD.searchArenaNoLeverStartIndex and index <= self.pathD.searchArenaNoLeverEndIndex:
+                if index >= j.searchArenaNoLeverStartIndex and index <= j.searchArenaNoLeverEndIndex:
                     maskDict["masksearchArenaNoLever"] = cv2.circle(maskDict["masksearchArenaNoLever"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
 
-                if index >= self.pathD.homingTotalStartIndex and index <= self.pathD.homingTotalEndIndex:
+                if index >= j.homingTotalStartIndex and index <= j.homingTotalEndIndex:
                     maskDict["maskHomingTotal"] = cv2.circle(maskDict["maskHomingTotal"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
-                if index >= self.pathD.homingPeriStartIndex and index <= self.pathD.homingPeriEndIndex:
+                if index >= j.homingPeriStartIndex and index <= j.homingPeriEndIndex:
                     maskDict["maskHomingPeri"] = cv2.circle(maskDict["maskHomingPeri"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)
-                if index >= self.pathD.homingPeriNoLeverStartIndex and index <= self.pathD.homingPeriNoLeverEndIndex:
+                if index >= j.homingPeriNoLeverStartIndex and index <= j.homingPeriNoLeverEndIndex:
                     maskDict["maskHomingPeriNoLever"] = cv2.circle(maskDict["maskHomingPeriNoLever"],
                                               (int(self.trialMLPx.loc[index,"mouseX"]),int(self.trialMLPx.loc[index,"mouseY"])),
                                                radius=1, color=(255, 255, 255), thickness=1)

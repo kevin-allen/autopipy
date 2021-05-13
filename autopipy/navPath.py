@@ -246,11 +246,12 @@ class NavPath:
     
     def meanVectorLength(self, theta, degree=True):
         """
-        Calculate the mean direction and mean vector length
+        Calculate the mean vector length
         Arguments:
             theta: angles for which you what the mean vector
             degree: whether we are working in degrees or radians
-            negativeAngle: whether you want angles from -180 to 180 or from 0 to 360
+        Return:
+        Mean vector length of theta
         """
         if degree:
             theta = theta*np.pi/180
@@ -264,6 +265,15 @@ class NavPath:
 
     
     def meanVectorDirection(self, theta, degree=True, negativeAngle=False):
+        """
+        Calculate the mean direction
+        Arguments:
+            theta: angles for which you what the mean vector
+            degree: whether we are working in degrees or radians
+            negativeAngle: whether you want angles from -180 to 180 or from 0 to 360
+        Return:
+        Mean direction of theta
+        """
         if degree:
             theta = theta*np.pi/180
         # get the unity vectors for these angles

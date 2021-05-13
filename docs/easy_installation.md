@@ -36,6 +36,8 @@ For instance, you could run this in the terminal
 ```
 export HTTP_PROXY=http://www-int2.inet.dkfz-heidelberg.de:80
 export HTTPS_PROXY=http://www-int2.inet.dkfz-heidelberg.de:80
+export http_proxy=http://www-int2.inet.dkfz-heidelberg.de:80
+export https_proxy=http://www-int2.inet.dkfz-heidelberg.de:80
 ```
 
 
