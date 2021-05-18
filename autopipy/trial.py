@@ -670,7 +670,7 @@ class Trial:
             ## angular deviation of the mouse when reaching periphery
             self.periArenaCenterBridgeAngle=self.vectorAngle(v = np.expand_dims(arenaToMousePeriVector,0),
                                                              rv = np.expand_dims(arenaToBridgeVector,0),
-                                                             degrees=True)
+                                                             degrees=True)[0]
     
         else : 
             # trial is invalid, just create one Journey covering the entire trial length and no lever pressed considered
@@ -951,7 +951,7 @@ class Trial:
             if self.valid:
                 if index > self.peripheryAfterFirstLeverPressVideoIndex :
                     frame = cv2.putText(frame, 
-                                        "Peri error: {:.0f} deg".format(self.periArenaCenterBridgeAngle[0]), 
+                                        "Peri error: {:.0f} deg".format(self.periArenaCenterBridgeAngle), 
                                         (30,320), 
                                         cv2.FONT_HERSHEY_SIMPLEX,
                                         0.5, (100,200,0), 1, cv2.LINE_AA)

@@ -184,13 +184,7 @@ class Session:
         self.synchroMaxFrameTimeDiff=self.videoLog.time.diff().max()
         self.synchroProblemTimeDiff = np.sum(self.videoLog.time.diff()>0.25)
         self.synchroMeanFrameRate= nFrames/(self.videoLog.time.max()-self.videoLog.time.min())
-        print("{}, video len: {}, video-log:{}, first frame: {}, max log gap: {}, mean time diff: {:.3}, max time diff: {:.3}, num problem diff: {}, frame rate: {:.3}".format(self.name,
-                                                                                            nFrames,
-                                                                                            self.syncrhoDifference,
-                                                                                             self.synchroFirstFrame,
-                                                                                             self.synchroGapLengths.max(),
-                                                                                            self.synchroMeanFrameTimeDiff,
-                                                                                             self.synchroMaxFrameTimeDiff,
+        print("{}, video len: {}, video-log len:{}, first frame: {}, max log gap: {}, mean time diff: {:.3}, max time diff: {:.3}, num problem diff: {}, frame rate: {:.3}".format(self.name, nFrames, len(self.videoLog), self.synchroFirstFrame, self.synchroGapLengths.max(), self.synchroMeanFrameTimeDiff, self.synchroMaxFrameTimeDiff,
                                                                                               self.synchroProblemTimeDiff,
                                                                                               self.synchroMeanFrameRate))
     def fixVideoLog(self,vl):
