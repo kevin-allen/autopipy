@@ -340,6 +340,7 @@ class Session:
         dfList = [trial.getTrialVariables() for trial in self.trialList]
         self.trialVariables = pd.concat(dfList)
         self.trialVariables["subject"]=self.subject # add the subject name to the dataframe
+        self.trialVariables["date"]= self.sessionDateTime # add the data to the data frame
     
     def getTrialPathSpeedProfile(self,pathName="searchTotal"):
         """

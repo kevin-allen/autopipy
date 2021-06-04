@@ -261,7 +261,7 @@ class Trial:
         if bCoord is None:
             raise TypeError("bCoord is None")
            
-        print("trial feature extraction")
+        #print("trial feature extraction")
         ##############################################
         ### get data to transform from pixels to cm ##
         ##############################################

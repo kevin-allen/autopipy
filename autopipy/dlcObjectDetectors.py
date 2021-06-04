@@ -340,14 +340,15 @@ class MouseLeverDetector(Dlc):
         
         # MOUSE
         # if we know where the mouse is, values for mouse starts at 
-        inds=9 #index at which the parts for the lever starts in the frameTrackingData
+        inds=9 #index at which the parts for the mouse starts in the frameTrackingData, 
+        # the order of nose, left ear, right ear
         if frameTrackingData[inds+2] > probThreshold and frameTrackingData[inds+5] > probThreshold and frameTrackingData[inds+8] > probThreshold:
     
-            ## middle point at the back of the lever (it does not matter if the two points are swapped, which is good)
+            ## middle point at the ears (it does not matter if the two points are swapped, which is good)
             P4x = (frameTrackingData[inds+3]+frameTrackingData[inds+6])/2
             P4y = (frameTrackingData[inds+4]+frameTrackingData[inds+7])/2
 
-            ## lever position (middle point)
+            ## mouse position (middle point between P4 and )
             x= (frameTrackingData[inds+0]+P4x)/2
             y= (frameTrackingData[inds+1]+P4y)/2
     
