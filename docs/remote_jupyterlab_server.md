@@ -24,7 +24,14 @@ This command forwards the remote port 8888 onto our local machine’s port 8888.
 ``` 
 ssh -N -L 8888:localhost:8888 kevin@a230-pc73
 ```
+Make sure you run this on your **local** computer.
 
 *  Now paste the addressed of the jupyter server in your browser. The address should start with `http://localhost:8888/?token=`
 
 You should now have a jupyter lab page in your browser.
+
+
+If the port is already used, you can try 
+```
+jupyter lab --no-browser --port=8890
+```
