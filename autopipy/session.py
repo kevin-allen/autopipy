@@ -221,7 +221,7 @@ class Session:
         print("Removed {} rows and added {} rows".format(removeCount,addCount))
         return vl
     
-    def segmentTrialsFromLog(self):
+    def segmentTrialsFromLog(self, verbose=True):
         """
         Identify the begining and end of each trial from the log file
         
@@ -232,9 +232,15 @@ class Session:
         We don't do any analysis of the trial here. Such analysis is done with the trial class.
         
         A pandas data frame called `trials` will be stored as a session attribute
+        
+        Arguments:
+        
+        verbose: Boolean indicating wheter to print information
+        
         """
         
-        print("{} trial segmentation".format(self.name))
+        if verbose:
+            print("{} trial segmentation".format(self.name))
         self.log = pd.read_csv(self.fileNames["log"],sep=" ")
         
         
@@ -255,27 +261,33 @@ class Session:
 
         # make sure it starts with opening the door (value of 0)
         while doorEvents.param.iloc[0] == 1:
-            print("Remove door closing event at the beginning of the session, index {}".format(doorEvents.index[0]))
+            if verbose:
+                print("Remove door closing event at the beginning of the session, index {}".format(doorEvents.index[0]))
             doorEvents = doorEvents.drop(doorEvents.index[0]) # remove first row
 
         # make sure it ends with closing the door (value of 1)
         if doorEvents.param.iloc[-1] == 0:
-            print("Remove last opening of the door")
+            if verbose:
+                print("Remove last opening of the door")
             doorEvents = doorEvents[:-1] # drop last row
 
         # make sure that the door alternates between up and down states.
         diffDoor = doorEvents.param.diff() # if == 0 we have repeat of the same door command
         if any(diffDoor == 0): # this is a problem
-            print("problem with the door alternation")
+            if verbose:
+                print("problem with the door alternation")
             for probIndex in doorEvents.index[diffDoor==0]: # loop over problematic indices
-                print("Problem with index {}".format(probIndex))
+                if verbose:
+                    print("Problem with index {}".format(probIndex))
                 if(doorEvents.param.loc[probIndex]==0):
                 # remove the index before 
                     indexBefore = doorEvents[doorEvents.time<doorEvents.time.loc[probIndex]].tail(1).index
-                    print("Removing the first of two door openings (index :{})".format(indexBefore))
+                    if verbose:
+                        print("Removing the first of two door openings (index :{})".format(indexBefore))
                     doorEvents = doorEvents.drop(indexBefore)
                 else :
-                    print("Removing the second of two door closings (index :{})".format(probIndex))
+                    if verbose:
+                        print("Removing the second of two door closings (index :{})".format(probIndex))
                     doorEvents = doorEvents.drop(probIndex)
 
         #######################################
@@ -290,7 +302,8 @@ class Session:
         
         trials = pd.DataFrame(data = myDict)
 
-        print("Number of trials : {}".format(len(trials)))
+        if verbose:
+            print("Number of trials : {}".format(len(trials)))
   
         self.trials = trials
 
