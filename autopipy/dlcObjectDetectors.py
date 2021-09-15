@@ -630,7 +630,7 @@ class BridgeDetector(Dlc):
         """
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
-    def detectBridgeCoordinates(self,pathVideoFile,numFrames=1000, skip=300, tmpDir="/tmp/"):
+    def detectBridgeCoordinates(self,pathVideoFile,numFrames=1000, skip=300, tmpDir="/tmp/",randomFrameSelection=True):
         """
         Perform bridge detection on a range of frames from a video
         
@@ -665,23 +665,34 @@ class BridgeDetector(Dlc):
             print(pathVideoFile + " does not exist")
             return False
 
-        count = 0 
+      
         cap = cv2.VideoCapture(pathVideoFile)
-
+        nFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
         fps = int (cap.get(cv2.CAP_PROP_FPS))
         width = int (cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int (cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
         out = cv2.VideoWriter(pathTmpVideo, cv2.VideoWriter_fourcc(*'MJPG'), fps, (width,height)) 
 
-        while cap.isOpened() and count < numFrames + skip: 
+        if randomFrameSelection:
+            selectIndices = np.sort(np.random.randint(skip,nFrames-1,numFrames))
+        
+        count = 0 
+        cap.set(cv2.CAP_PROP_POS_FRAMES,skip)
+        
+        while cap.isOpened() and count < numFrames: 
+            
+            if randomFrameSelection:
+                cap.set(cv2.CAP_PROP_POS_FRAMES,selectIndices[count])
+            
             ret, frame = cap.read() 
             count = count+1 
             if not ret: 
                 print("Can't receive frame (stream end?). Exiting ...") 
                 break 
-            if count > skip: 
-                out.write(frame) 
+           
+            out.write(frame) 
              
         cap.release() 
         out.release() 
@@ -702,7 +713,8 @@ class BridgeDetector(Dlc):
         
         
         # we should check that we have valid values not NAN and that they are within the frame
-        
+        if np.sum(np.logical_not(np.isnan(self.posi[:,0]))) == 0:
+            print("bridge detection only returned invalid data")
         
         
         # get the mode of leftAnt.x, leftAnt.y, rightAnt.x, rightAnt.y

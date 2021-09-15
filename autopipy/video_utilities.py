@@ -197,8 +197,8 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
                                       arenaMinRadius= 190,
                                       arenaMaxRadius= 230,
                                       arenaCircleMethod = "min",
-                                      numFramesArenaDetection=500,
-                                      numFramesBridgeDetection=500,
+                                          numFramesArenaDetection=1000,
+                                      numFramesBridgeDetection=1000,
                                       labelDlcMouseLeverVideo=False):
     """
     Function to do all the video processing to get the position of the animal on the arena

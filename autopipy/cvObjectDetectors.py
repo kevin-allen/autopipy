@@ -18,7 +18,17 @@ class ArenaDetector:
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
-    def detectArenaCoordinates (self, pathVideoFile, minRadius=180, maxRadius=220, numFrames=100, blur=11, circleMethod='min'):
+    def detectArenaCoordinates (self, pathVideoFile, minRadius=180, maxRadius=220, numFrames=100, blur=11, circleMethod='min',randomFrameSelection=True):
+        """
+        Detect the arena from images of a videos
+        
+        minRadius: minimum radius to be considered
+        maxRadius: maximum radius to be considered
+        numFrames: how many frames to analyze
+        blur: frames will be blurred before circle detection
+        randomFrameSelection: pick random frames from the video instead of picking the first frames
+        circleMethod: how to pick the final circle coordinate from all circles that were detected ("min" or "median" radius)
+        """
     
         if not os.path.isfile(pathVideoFile): 
             print(pathVideoFile + " does not exist")
@@ -26,13 +36,21 @@ class ArenaDetector:
            
         self.pathVideoFile = pathVideoFile
         cap = cv2.VideoCapture(self.pathVideoFile)
+        nFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         l = []
 
         ## loop throught the frames and detect the arnea
         ## save the x,y of center and radius in the list l
+        if randomFrameSelection:
+            selectIndices = np.sort(np.random.randint(0,nFrames-1,numFrames))
+        
+       
         count=0
         while cap.isOpened() and count < numFrames :
+            if randomFrameSelection:
+                cap.set(cv2.CAP_PROP_POS_FRAMES,selectIndices[count])
+                
             ret, frame = cap.read()
             # if frame is read correctly ret is True
             if not ret:
