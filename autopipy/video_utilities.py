@@ -218,6 +218,7 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     arenaD = ArenaDetector()
     aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=arenaMinRadius, 
                                   maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
+    
     arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
 
     configFile = modelDir+"/"+ bridge640_480Model+"/config.yaml"
@@ -271,8 +272,8 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     
     arenaImageFile=ses.path+"/arenaDetectionCropped.png"
     arenaD = ArenaDetector()
-    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=arenaMinRadius, 
-                                  maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
+    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=aCoord[2]-5, 
+                                  maxRadius=aCoord[2]+5, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
     arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
     np.savetxt(ses.fileNames["arenaCoordinates"],aCoord,delimiter=",") 
 
