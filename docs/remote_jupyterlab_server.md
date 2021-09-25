@@ -10,7 +10,7 @@ ssh a230-pc73
 source .bashrc # in case conda is not in your PATH
 conda activate DEEPLABCUT  # or source ~/python_virtual_environments/autopi37/bin/activate
 cd ~/repo
-jupyter lab --no-browser --allow-root
+jupyter lab --no-browser --allow-root --port=8888
 ```
 
 
