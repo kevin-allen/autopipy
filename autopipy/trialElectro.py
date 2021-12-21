@@ -79,6 +79,8 @@ class TrialElectro:
         
         All values are in cm with 0,0 being the center of the arena.
         
+        The zone definitions are stored in a dictionary called self.zones
+        
         The areas are defined in a list. For rectangular areas, we save the bottom-left coordinate and width height.
         For the arena, the center and radius are saved. 
         
@@ -116,14 +118,16 @@ class TrialElectro:
                                           homeBaseXCm,
                                           homeBaseYCm])
                     
-        
-    
     def setMousePosition(self,mousePose):
         """
         Extract the mouse position data for this trial.
         
+        The time use is ROS time
+        
         Argument:
         mousePose: Pandas DataFrames with x,y,hd,time for the entire session
+        
+
         Save it in self.mousePose
         
         """
@@ -138,28 +142,13 @@ class TrialElectro:
             print("{}, the mouse was detected for fewer than 20 frames during the trial".format(self.name))
             print("{}, self.valid set to False".format(self.name))
             self.valid = False
-    
-    def interpolateMousePose(self, limit=10):
-        """
-        Interpolate small gaps in the mouse position data
-        
-        In order to have as many valid position data points as possible, we will linearly interpolate the data
-        when there are just a few np.nan in the data.
-        
-        We will need to deal with head-direction data using sin and cos decomposition.
-        
-        We use the pandas interpolation function
-        https://pandas.pydata.org/pandas-docs/version/1.3/reference/api/pandas.DataFrame.interpolate.html
-        
-        Arguments
-        limit: Maximum number of consecutive NaNs to fill. Must be greater than 0.
-        """
-        self.mousePose.x = self.mousePose.x.interpolate(limit=limit)
-        self.mousePose.y = self.mousePose.y.interpolate(limit=limit)
         
     def setLeverPosition(self,leverPose):
         """
-        Extract the lever position data for this trial
+        Extract the lever position data for this trial.
+        
+        The time is ROS time
+        
         Argument:
         leverPose: Pandas DataFrames with pose for the lever for the entire session. With these columns:
                     ['time', 'leverPressX', 'leverPressY', 'leverBoxPLX','leverBoxPLY', 'leverBoxPRX', 'leverBoxPRY']
@@ -200,7 +189,7 @@ class TrialElectro:
         """
         Get the time of lever presses within the trial. 
         Calculate the position of the animal at the lever press time
-        Cound how many lever presses in total were performed
+        Count how many lever presses in total were performed
         """
         lever = log[ (log.event=="lever_press") | (log.event == "leverPress")]
         index = (lever.time>self.startTime) & (lever.time<self.endTime) # boolean array
@@ -228,19 +217,112 @@ class TrialElectro:
             self.valid=False
     
     
+    def setPositionZones(self):
+        """
+        Create a DataFrame that containes the current position zone of the animal (arena, arenaCenter, bridge, home base).
+        
+        It creates a data frame called self.positionZones
+        """
+        
+        mousePoints = np.stack([self.mousePose.x.to_numpy(),self.mousePose.y.to_numpy()],axis=1)
+        self.distanceFromArenaCenter = np.sqrt(np.sum((mousePoints - self.zones["arenaCenter"][0:2])**2,axis=1))
+        
+        # bridge
+        mouseRelBridge = mousePoints-self.zones["bridge"][0:2]  # position relative to the bottom left of the bridge
+        onBridge = np.logical_and(mouseRelBridge[:,1]> 0, mouseRelBridge[:,1] < self.zones["bridge"][3])
+        
+        # home base
+        mouseRelHb = mousePoints-self.zones["homeBase"][0:2]  # position relative to the bottom left of the bridge
+        onHb = np.logical_and(mouseRelHb[:,1]> 0, mouseRelHb[:,1] < self.zones["homeBase"][3])
+        
+        # gap between bridge and arena (y between max of bridge and -40)
+        gap = np.logical_and(mouseRelBridge[:,1]>self.zones["bridge"][3],self.mousePose.y < -40)
+        
+        self.positionZones=pd.DataFrame({"lever": self.lever.isAt(mousePoints), # use the lever object
+                                         "arenaCenter": self.distanceFromArenaCenter< self.zones["arenaCenter"][2],
+                                         "arena": self.distanceFromArenaCenter< self.zones["arena"][2],
+                                         "bridge": onBridge,
+                                         "homeBase": onHb,
+                                            "gap": gap})
+        
+        # get the one-hot encoding back into categorical, when several true, the first column is return.
+        self.positionZones["loca"] = self.positionZones.iloc[:, :].idxmax(1)
+        
+        
+    def identifyJourneyBorders(self):
+        """
+        Identify the beginning and end of journeys 
+        
+        A journey starts when the animal leaves and is going to enter the arena center. 
+        The start of one journey is the end of the next journey or the end of the trial
+        
+        The method generate a DataFrame (slef.journeyStartEndIndices) with a "start" and "end" column.
+        
+        """
+        # get the rows in which the mouse is on the bridge or arenaCenter
+        bridgeArenaCenter = self.positionZones[ (self.positionZones.loca=="bridge") | (self.positionZones.loca=="arenaCenter") ]
+        # get a df to look for bridge to arenaCenter transition
+        df = pd.DataFrame({"start" : bridgeArenaCenter.loca,"end" : bridgeArenaCenter.shift(-1).loca})
+
+        # start of journey is when the animal leaves the bridge to go on the arenaCenter to explore the center
+        self.journeyTransitionIndices = df[(df.start=="bridge") & (df.end=="arenaCenter")].index.values - 1 # - 1 because of the shift
+
+        ## if the mouse first appeared as it was on the arena at the beginning of the trial, add one journey starting at the first arena 
+        if np.sum(df.end=="arenaCenter")>0:
+            if np.sum(df.start=="bridge")==0:
+                print("{}, no bridge time in the trial".format(self.name))
+                print("{}, add a journey missed because of no brige time before first arenaCenter".format(self.name))
+                firstArenaCenterIndex = df[(df.end=="arenaCenter")].index[0]
+                self.journeyTransitionIndices = np.insert(self.journeyTransitionIndices,0,firstArenaCenterIndex-1)
+            else :
+                firstBridgeIndex = df[(df.start=="bridge")].index[0]
+                firstArenaCenterIndex = df[(df.end=="arenaCenter")].index[0]
+                if firstArenaCenterIndex < firstBridgeIndex:
+                    print("{}, add a journey missed because of no brige time before first arenaCenter".format(self.name))
+                    self.journeyTransitionIndices = np.insert(self.journeyTransitionIndices,0,firstArenaCenterIndex-1)
+
+
+        ## get the start and end indices of journeys 
+        if len(self.journeyTransitionIndices) > 0:
+            jt = np.append(self.journeyTransitionIndices,self.positionZones.index.values[-1]) # get index for end of last journey
+            # dataframe with start and end indices for each journey
+            self.journeyStartEndIndices = pd.DataFrame({"start" : jt[0:-1], "end" : jt[1:]-1})
+
+            
+    def checkTrialValidity(self):
+        """
+        Check that the trial is valid
+        
+        - the mouse should go onto the arena
+        
+        Some other checks are done in self.getLeverPresses, self.getMousePosition, self.getLeverPosition
+        
+        Additional checks can be added here
+        
+        Results stored in self.valid (True or False)
+        """
+        self.valid=True
+        
+        if np.sum(self.positionZones["arena"])<0:
+            print("the mouse was detected on the arena")
+            self.valid=False
+        
+    
+    
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
     
-    def trialPathFigure(self, legend = True, figSize=(10,10), zones=False, filePath=None):
+    
+    
+    def trialPathFigure(self, legend = True, figSize=(10,10), zones=False, filePath=None, positionZones = False):
         """
         Plot the path of the animal on the arena with the lever
         
-        Argument
-            pathNames List of path names to display
-            legend Bool
-            figSize Tuple of the figure size
+        Use to make sure that trial data extraction is working
         
+        Argument
+                    
         """
         # to plot the arena circle
         arena=np.arange(start=0,stop=2*np.pi,step=0.02)
@@ -260,7 +342,26 @@ class TrialElectro:
         
         
          ## mouse path
-        axes.plot(self.mousePose.x,self.mousePose.y,color="black", label="path")
+        if positionZones == False:
+            axes.plot(self.mousePose.x,self.mousePose.y,color="black", label="path")
+        else :
+            # plot the position in different color depending on self.positionZone 
+            axes.plot(self.mousePose.x.loc[self.positionZones["homeBase"].to_numpy()],
+                      self.mousePose.y.loc[self.positionZones["homeBase"].to_numpy()],
+                      color="orange", label="Home base")
+            axes.plot(self.mousePose.x.loc[self.positionZones["arena"].to_numpy()],
+                      self.mousePose.y.loc[self.positionZones["arena"].to_numpy()],
+                      color="green", label="Arena")
+            axes.plot(self.mousePose.x.loc[self.positionZones["arenaCenter"].to_numpy()],
+                      self.mousePose.y.loc[self.positionZones["arenaCenter"].to_numpy()],
+                      color="pink", label="Arena center")
+            axes.plot(self.mousePose.x.loc[self.positionZones["bridge"].to_numpy()],
+                      self.mousePose.y.loc[self.positionZones["bridge"].to_numpy()],
+                      color="gray", label="Bridge")
+            axes.plot(self.mousePose.x.loc[self.positionZones["gap"].to_numpy()],
+                      self.mousePose.y.loc[self.positionZones["gap"].to_numpy()],
+                      color="yellow", label="Gap")
+            
         
         
         ## lever
@@ -280,10 +381,73 @@ class TrialElectro:
             for i in ["bridge","homeBase"]:
                 
                 rect = patches.Rectangle((self.zones[i][0], self.zones[i][1]), self.zones[i][2], self.zones[i][3], linewidth=1, edgecolor='gray', facecolor='none')
-                # Add the patch to the Axes
+                # Add the patch to the axes
                 axes.add_patch(rect)
                 
+            
+          
+            
+            
+        if filePath is not None:
+            print("Saving to " + filePath)
+            plt.savefig(filePath,bbox_inches = "tight")
+    
+    def trialJourneyFigure(self, zones = True, legend=True,figSize=(10,10), filePath=None,):
+        """
+        Plot the path of the animal during the different journeys (different colours)
         
+        
+                    
+        """
+         # to plot the arena circle
+        arena=np.arange(start=0,stop=2*np.pi,step=0.02)
+                
+        fig, axes = plt.subplots(1,1,figsize=figSize)
+        plt.subplots_adjust(wspace=0.3,hspace=0.3)
+
+        # plot the arena and arena periphery
+        axes.set_aspect('equal', adjustable='box')
+        axes.set_title("{}, {}, {:.1f} sec".format(self.name,self.light,self.endTime-self.startTime))
+        axes.plot(np.cos(arena)*self.arenaRadius,np.sin(arena)*self.arenaRadius,label="Arena",color="gray")
+        axes.plot(np.cos(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,
+                     np.sin(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,label="Periphery",color="gray",linestyle='dashed')
+        axes.set_xlabel("cm")
+        axes.set_ylabel("cm")
+        
+        
+         ## mouse path
+        for j in range(len(self.journeyStartEndIndices.start)):
+    
+            start = self.journeyStartEndIndices["start"][j]
+            end = self.journeyStartEndIndices["end"][j]
+            axes.plot(self.mousePose.x.loc[start:end],self.mousePose.y.loc[start:end])
+            
+         
+        
+        ## lever
+        axes.plot(self.lever.pointsPlot[:,0],self.lever.pointsPlot[:,1], color = "gray")
+        axes.plot(self.lever.enterZonePointsPlot[:,0],self.lever.enterZonePointsPlot[:,1], color = "gray",linestyle="dotted")
+        axes.plot(self.lever.exitZonePointsPlot[:,0],self.lever.exitZonePointsPlot[:,1], color = "gray",linestyle="dotted")
+        
+        ## position of the mouse when pressing the lever
+        if self.nLeverPresses != 0:
+            axes.scatter(self.leverPress.mouseX,self.leverPress.mouseY,c="red")
+
+        if legend:
+            axes.legend(loc="upper right")
+        
+        if zones:
+            # draw the zones
+            for i in ["bridge","homeBase"]:
+                
+                rect = patches.Rectangle((self.zones[i][0], self.zones[i][1]), self.zones[i][2], self.zones[i][3], linewidth=1, edgecolor='gray', facecolor='none')
+                # Add the patch to the axes
+                axes.add_patch(rect)
+                
+            
+          
+            
+            
         if filePath is not None:
             print("Saving to " + filePath)
             plt.savefig(filePath,bbox_inches = "tight")

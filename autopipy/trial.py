@@ -650,7 +650,7 @@ class Trial:
                     break
 
             #####################################################################
-            ## moue coordinate when reaching periphery after first lever press ##
+            ## mouse coordinate when reaching periphery after first lever press ##
             #####################################################################
             self.peripheryAfterFirstLeverPressCoordCm = np.array([self.trialMLCm.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseX"],
                                                                 self.trialMLCm.loc[self.peripheryAfterFirstLeverPressVideoIndex,"mouseY"]])

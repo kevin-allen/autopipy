@@ -90,8 +90,8 @@ def maskCropVideoToBridgeArena(pathVideoFile, pathOutputFile, arenaCoordinates, 
         xmin = 0
         xmax = xmax + diff
     if xmax > inWidth:
-        diff = np.abs(xmax - width)
-        xmax = width
+        diff = np.abs(xmax - inWidth)
+        xmax = inWidth
         xmin = xmin - diff
 
     # try to center the y on the arena center

@@ -344,18 +344,19 @@ class MouseLeverDetector(Dlc):
         # the order of nose, left ear, right ear
         if frameTrackingData[inds+2] > probThreshold and frameTrackingData[inds+5] > probThreshold and frameTrackingData[inds+8] > probThreshold:
     
-            ## middle point at the ears (it does not matter if the two points are swapped, which is good)
+            ## middle point between the ears (it does not matter if the two points are swapped, which is good)
             P4x = (frameTrackingData[inds+3]+frameTrackingData[inds+6])/2
             P4y = (frameTrackingData[inds+4]+frameTrackingData[inds+7])/2
 
-            ## mouse position (middle point between P4 and )
+            ## mouse position (middle point between P4(middle point between ears) and nose)
             x= (frameTrackingData[inds+0]+P4x)/2
             y= (frameTrackingData[inds+1]+P4y)/2
     
-            ## vector from middle point to tip of lever
+            ## vector from middle point between ears to the nose
             X=frameTrackingData[inds+0]-x
             Y=frameTrackingData[inds+1]-y
             v=np.array([X,Y])
+          
             ## make it a unitary vector, get the length
             ## get the angle of this vector relative to 1,0
             ## make it a unitary vector, get the length
@@ -374,10 +375,10 @@ class MouseLeverDetector(Dlc):
         
     def labelVideoMouseLever(self,pathVideoFile,pathOutputFile):
         """
-        Function to create a label video specific to lever detection
+        Function to create a label video specific to mouse lever detection
         
         This is similar to the labelVideo() function of deeplabcut. 
-        But in addition it shows the calculated position and orientation of the lever
+        But in addition it shows the calculated position and orientation of the lever and mouse
         
         There will be an arrow specifying the direction of the lever and a dot for its center
         
