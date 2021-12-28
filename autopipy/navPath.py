@@ -43,6 +43,8 @@ class NavPath:
         self.pPose = pPose
         self.targetPose = targetPose
         self.name = name
+        self.startTime = self.pPose[:,6].min()
+        self.endTime=self.pPose[:,6].max()
         
         if self.pPose.shape[1] != 7 :
             print("{} :pPose should have 7 columns [x, y, z, yaw, pitch, roll, time]".format(self.name))
@@ -82,8 +84,13 @@ class NavPath:
         
         
         posi = self.pPose[:,0:3] # get position data
-        self.mv = np.diff(posi,axis = 0) # movement vector in x y z dimensions
+        self.mv = np.diff(posi,axis = 0,append=np.nan) # movement vector in x y z dimensions
         mv3 = np.sqrt(np.sum(self.mv*self.mv,axis = 1)) # length of vectors (pythagoras) 
+        
+        # run distance from beginning of path
+        self.distanceRun = np.cumsum(mv3)
+        # time from beginning
+        self.internalTime = self.pPose[:,6]- self.pPose[:,6].min()
         
         # length of the path in 3D
         self.length = np.sum(mv3)
@@ -108,18 +115,19 @@ class NavPath:
         
         # mean linear speed
         self.meanSpeed = self.length/self.duration
-        timeDiff=np.diff(self.pPose[:,6],axis = 0)
+        timeDiff=np.diff(self.pPose[:,6],axis = 0,append=np.nan)
         
         # speed profile in the path divided into 10 equal bins 
-        speed=mv3/timeDiff
+        self.speed=mv3/timeDiff
         ##WARNING##
         # we need to remove na for the stats.binned_statistic
         # we might want to change this behavior in the future
         # I do not expect to have many nan in the paths, based on labeled videos
-        speed = speed[~np.isnan(speed)] 
-        if len(speed) > 9 :
-            x=np.arange(len(speed))
-            binRes = stats.binned_statistic(x,speed,"mean",bins=10)
+        self.speedShort = self.speed[~np.isnan(self.speed)] 
+        if len(self.speedShort) > 9 :
+            x=np.arange(len(self.speedShort))
+            ind = np.isfinite(self.speedShort)
+            binRes = stats.binned_statistic(x[ind],self.speedShort[ind],"mean",bins=10)
             self.speedProfile = binRes.statistic     
         else :
             self.speedProfile = np.empty((10))
@@ -163,6 +171,27 @@ class NavPath:
             angles=self.vectorAngle(hdv,tv[:,0:2],degrees=True,quadrant=False)
             self.medianHDDeviationToTarget = np.nanmedian(angles)
     
+    def instantaneousBehavioralVariables(self):
+        """
+        Method returning instantaneous behavioral variables from the path.
+        We get as many rows as there are in the self.pPose array
+        
+        Arguments
+        
+        Return:
+        DataFrame time, internal time, distance run, speed, x, y as columns
+        """
+        
+        if self.pPose is not None :            
+            return pd.DataFrame({"name" : self.name,
+                                 "timeRos": self.pPose[:,6],
+                                 "iTime": self.internalTime,
+                                 "distance": self.distanceRun,
+                                 "speed": self.speed,
+                                 "x": self.pPose[:,0],
+                                 "y": self.pPose[:,1]})
+             
+        
     
     def getVariables(self):
         self.myDict = {

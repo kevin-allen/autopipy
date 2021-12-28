@@ -5,8 +5,12 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from datetime import datetime
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.patches as patches
 from autopipy.trial import Trial
 from autopipy.trialElectro import TrialElectro
+from tqdm import tqdm
+
 class Session:
     """
     Class containing information about an autopi session
@@ -329,6 +333,9 @@ class Session:
             return TrialElectro(x.sessionName,x.trialNo,x.startTime,x.endTime,x.startTimeWS,x.endTimeWS)
         self.trialList = self.trials.apply(getTrialFromSeries,axis=1).tolist()
         
+        #for trial in self.trialList:
+        #    trial.
+        
     def getTrial(self,trialNo):
         """
         Get a single trial from the trial list using the trial number
@@ -338,6 +345,77 @@ class Session:
             return None
         
         return [t for t in self.trialList if t.trialNo==trialNo][0]
+    
+    def extractTrialElectroFeatures(self,mousePose):
+        """
+        Extract trial features for session with electrophysiology
+        
+        Arguments: 
+        mousePose: numpy array, the spikeA.AnimalPose.Pose
+        
+        The leverPose is generated from the lever_pose.ipynb` notebook
+        
+        """
+        self.mousePose = pd.DataFrame({"time":mousePose[:,7], # ROS time
+                         "x":mousePose[:,1],
+                         "y":mousePose[:,2],
+                         "hd":mousePose[:,4]})
+        self.leverPose = pd.read_csv(self.path+"/leverPose",index_col = False) 
+        for trial in self.trialList:
+            trial.extractTrialFeatures(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],
+                                       bridgeCoordinatesFile = self.fileNames["bridgeCoordinates"],
+                                       log = self.log,
+                                       mousePose = self.mousePose,
+                                       leverPose = self.leverPose)
+    
+        self.nJourneys = np.sum([ t.nJourneys for t in self.trialList])
+        self.nTrials = len(self.trialList)
+    
+    def navPathIntervals(self):
+        """
+        Function returning a DataFrame with the start and end time of each NavPaths 
+
+        All NavPaths are included in the DataFrame.
+
+        Return
+        DataFrame with the name, trial, journey, type, light, nLeverPresses, startTimeRos, endTimeRos of each NavPath
+        """
+        myList=[]
+        for t in self.trialList:
+            for j in t.journeyList:
+                for k in j.navPaths.keys():
+                   
+                    df = pd.DataFrame({"name": [j.navPaths[k].name],
+                                       "trial": [t.name],
+                                       "trialNo": [t.trialNo],
+                                       "journey": [j.journeyNo],
+                                       "type": [k],
+                                       "light": [t.light],
+                                       "nLeverPresses": [j.nLeverPresses],
+                                 "startTimeRos": [j.navPaths[k].startTime],
+                                 "endTimeRos": [j.navPaths[k].endTime]})
+                    myList.append(df)
+
+        
+        return pd.concat(myList)
+
+    def navPathInstantaneousBehavioralData(self):
+        """
+        Function returning the instantaneous behavioral data of all NavPaths 
+
+        Arguments:
+        
+        Return
+        DataFrame with a bunch of behavioral variables varying in time
+        """
+        myList=[]
+        for t in self.trialList:
+            for j in t.journeyList:
+                for k in j.navPaths.keys():
+                    myList.append(j.navPaths[k].instantaneousBehavioralVariables())
+                            
+        return pd.concat(myList)
+    
     
     def extractTrialFeatures(self):
         """
@@ -484,3 +562,35 @@ class Session:
             fileName = self.fileBase+"_trialPaths.pdf"
         print("Saving trialPaths in " + fileName)
         plt.savefig(fileName)
+    def plotTrialsWithJourneys(self,fileName):
+        """
+        Method to plot all trials of a session with the extracted journeys
+        
+        The main purpose is to visualize trials/journeys for potential problems with trial/journey extraction.
+        
+        There is one row per trial.
+        The first column is the complete trial.
+        The following rows (up to 5) are the individual journeys performed by the mouse.
+        
+        The figure is saved into a pdf file.
+        
+        Argument:
+        fileName: name of the file to save the pdf
+        """
+        
+        print("Generating",fileName)
+        nRow=8
+        nCol=5
+
+        with PdfPages(fileName) as pdf:
+            for i in tqdm(range(len(self.trialList))):
+                trial = self.trialList[i]
+                currentRow = i%nRow
+                if currentRow == 0:
+                    fig, axes = plt.subplots(nRow,nCol,figsize=(12,4*nRow))
+
+                trial.plotTrialAndJourneys(axes[currentRow,:])
+
+                if currentRow == nRow-1:
+                    pdf.savefig()  # saves the current figure into a pdf page
+                    plt.close()

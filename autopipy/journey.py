@@ -20,7 +20,7 @@ class Journey:
     
     We develop this class because we might want to consider the mouse behavior during all journeys, not just during the journeys when the lever was pressed.
     
-    Attributes:
+    Attributes:There
         name: Name of the trial, usually sessionName_trialNo-JourneyNo
         sessionName: Name of the session in which the trial was performed
         trialNo: Trial number within the session

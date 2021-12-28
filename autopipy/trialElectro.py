@@ -5,9 +5,9 @@ import numpy as np
 from scipy import stats
 import cv2
 import sys
-from autopipy.journey import Journey
 from autopipy.navPath import NavPath
 from autopipy.lever import Lever
+from autopipy.journeyElectro import JourneyElectro
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from scipy.interpolate import interp1d
@@ -39,19 +39,7 @@ class TrialElectro:
         ...
     
     Methods:
-        checkSessionDirectory()
-        extractTrialFeatures()
-        poseFromTrialData()
-        poseFromBridgeCoordinates()
-        videoIndexFromTimeStamp()
-        createTrialVideo()
-        decorateVideoFrame()
-        vectorAngle()
-        lightFromCode()
-        previousLight()
-        getTrialVariables()
-        dataToCm()
-        dataToPx()
+       
         
     """
     def __init__(self,sessionName,trialNo,startTime,endTime,startTimeWS,endTimeWS):
@@ -72,6 +60,121 @@ class TrialElectro:
         
         self.test = None
     
+    def extractTrialFeatures(self,arenaCoordinatesFile,bridgeCoordinatesFile,log,mousePose,leverPose):
+        """
+        Function to perform most of the analysis on a trial
+        
+        Arguments:
+        arenaCoordinatesFile: file with the arena coordinates
+        bridgeCoordinatesFile: file with the bridge coordinates
+        log: autopi log recorded during the task and loaded as a pandas dataframe
+        mousePose: DataFrame with time, x, y , hd. It has the data from the entire session
+        leverPose: DataFrame loaded from leverPose file. It has the data from the entire session
+        """
+        
+        self.setArenaRadius(40)
+        self.setZoneAreas(arenaCoordinatesFile,
+                           bridgeCoordinatesFile)
+        self.adjustTrialStart(mousePose)
+        self.getLightCondition(log)
+        self.setMousePosition(mousePose) # to rerun
+        self.setLeverPosition(leverPose) # to rerun
+        self.getLeverPresses(log) # to rerun
+        self.setPositionZones() # to rerun
+        self.checkTrialValidity()
+        self.identifyJourneyBorders()
+        
+        # create a list of JourneyElectro object
+        self.journeyList = []
+        for i in range(self.nJourneys):
+            self.journeyList.append(JourneyElectro(self.sessionName,self.trialNo,i,
+                   self.journeyStartEndIndices.start.iloc[i],self.journeyStartEndIndices.end.iloc[i],
+                   self.lever,              
+                   self.zones, self.arenaRadiusProportionToPeri,
+                   self.leverPress,
+                   self.mousePose,
+                   self.positionZones))
+        
+        
+        
+    
+    def adjustTrialStart(self,sesMousePose):
+        """
+        Adjust the trial start time to make sure we have bridge time before arena time
+        
+        This ensures that we always start the trials at the same location.
+        
+        Argument
+        sesMousePose: mouse pose for the entire session, DataFrame with time,x,y,hd
+        """
+       
+        self.mousePose = sesMousePose[sesMousePose["time"].between(self.startTime,self.endTime)] # current trial position
+    
+        mousePoints = np.stack([self.mousePose.x.to_numpy(),self.mousePose.y.to_numpy()],axis=1)
+        self.distanceFromArenaCenter = np.sqrt(np.sum((mousePoints - self.zones["arenaCenter"][0:2])**2,axis=1))
+
+        # bridge
+        mouseRelBridge = mousePoints-self.zones["bridge"][0:2]  # position relative to the bottom left of the bridge
+        onBridge = np.logical_and(mouseRelBridge[:,1]> 0, mouseRelBridge[:,1] < self.zones["bridge"][3])
+        firstBridge = np.argmax(onBridge)
+
+        # distance from center
+        mousePoints = np.stack([self.mousePose.x.to_numpy(),self.mousePose.y.to_numpy()],axis=1)
+        self.distanceFromArenaCenter = np.sqrt(np.sum((mousePoints - self.zones["arenaCenter"][0:2])**2,axis=1))
+        onArena = self.distanceFromArenaCenter< self.zones["arena"][2]
+        firstArena = np.argmax(onArena)
+        if firstBridge>firstArena:
+
+            # start with the session position data and find the last bridge before the start of the trial, use this time as trial start
+            mp = sesMousePose.loc[sesMousePose.time<self.startTime,:] # mouse pose before the start of the trial
+            mousePoints = np.stack([mp.x.to_numpy(),mp.y.to_numpy()],axis=1)
+            # bridge
+            mouseRelBridge = mousePoints-self.zones["bridge"][0:2]  # position relative to the bottom left of the bridge
+            onBridge = np.logical_and(mouseRelBridge[:,1]> 0, mouseRelBridge[:,1] < self.zones["bridge"][3])
+
+            lastBridgeIndex = np.where(onBridge)[0][-1]
+            newStartTime= mp.iloc[lastBridgeIndex].time
+
+           
+            #print("new start time", newStartTime)
+            timeChange = newStartTime-self.startTime
+            if np.abs(timeChange) > 0.5:
+                print("{}, start time adjustment: {:.4f} sec".format(self.name,timeChange))
+            self.startTime = newStartTime
+    
+    
+    
+    def setPositionZones(self):
+        """
+        Create a DataFrame that containes the current position zone of the animal (arena, arenaCenter, bridge, home base).
+        
+        It creates a data frame called self.positionZones
+        """
+        
+        mousePoints = np.stack([self.mousePose.x.to_numpy(),self.mousePose.y.to_numpy()],axis=1)
+        self.distanceFromArenaCenter = np.sqrt(np.sum((mousePoints - self.zones["arenaCenter"][0:2])**2,axis=1))
+        
+        # bridge
+        mouseRelBridge = mousePoints-self.zones["bridge"][0:2]  # position relative to the bottom left of the bridge
+        onBridge = np.logical_and(mouseRelBridge[:,1]> 0, mouseRelBridge[:,1] < self.zones["bridge"][3])
+        
+        # home base
+        mouseRelHb = mousePoints-self.zones["homeBase"][0:2]  # position relative to the bottom left of the bridge
+        onHb = np.logical_and(mouseRelHb[:,1]> 0, mouseRelHb[:,1] < self.zones["homeBase"][3])
+        
+        # gap between bridge and arena (y between max of bridge and -40)
+        gap = np.logical_and(mouseRelBridge[:,1]>self.zones["bridge"][3],self.mousePose.y < -40)
+        
+        self.positionZones=pd.DataFrame({"lever": self.lever.isAt(mousePoints), # use the lever object
+                                         "arenaCenter": self.distanceFromArenaCenter< self.zones["arenaCenter"][2],
+                                         "arena": self.distanceFromArenaCenter< self.zones["arena"][2],
+                                         "bridge": onBridge,
+                                         "homeBase": onHb,
+                                            "gap": gap})
+        
+        # get the one-hot encoding back into categorical, when several true, the first column is return.
+        self.positionZones["loca"] = self.positionZones.iloc[:, :].idxmax(1)
+        
     
     def setZoneAreas(self, arenaCoordinateFileName, bridgeCoordinateFileName,bridgeLengthCm=12,homeBaseXCm=30,homeBaseYCm=25):
         """
@@ -215,39 +318,7 @@ class TrialElectro:
             print("{}, position of the animal at first lever press unknown".format(self.name))
             print("{}, self.valid set to False".format(self.name))
             self.valid=False
-    
-    
-    def setPositionZones(self):
-        """
-        Create a DataFrame that containes the current position zone of the animal (arena, arenaCenter, bridge, home base).
-        
-        It creates a data frame called self.positionZones
-        """
-        
-        mousePoints = np.stack([self.mousePose.x.to_numpy(),self.mousePose.y.to_numpy()],axis=1)
-        self.distanceFromArenaCenter = np.sqrt(np.sum((mousePoints - self.zones["arenaCenter"][0:2])**2,axis=1))
-        
-        # bridge
-        mouseRelBridge = mousePoints-self.zones["bridge"][0:2]  # position relative to the bottom left of the bridge
-        onBridge = np.logical_and(mouseRelBridge[:,1]> 0, mouseRelBridge[:,1] < self.zones["bridge"][3])
-        
-        # home base
-        mouseRelHb = mousePoints-self.zones["homeBase"][0:2]  # position relative to the bottom left of the bridge
-        onHb = np.logical_and(mouseRelHb[:,1]> 0, mouseRelHb[:,1] < self.zones["homeBase"][3])
-        
-        # gap between bridge and arena (y between max of bridge and -40)
-        gap = np.logical_and(mouseRelBridge[:,1]>self.zones["bridge"][3],self.mousePose.y < -40)
-        
-        self.positionZones=pd.DataFrame({"lever": self.lever.isAt(mousePoints), # use the lever object
-                                         "arenaCenter": self.distanceFromArenaCenter< self.zones["arenaCenter"][2],
-                                         "arena": self.distanceFromArenaCenter< self.zones["arena"][2],
-                                         "bridge": onBridge,
-                                         "homeBase": onHb,
-                                            "gap": gap})
-        
-        # get the one-hot encoding back into categorical, when several true, the first column is return.
-        self.positionZones["loca"] = self.positionZones.iloc[:, :].idxmax(1)
-        
+   
         
     def identifyJourneyBorders(self):
         """
@@ -288,6 +359,7 @@ class TrialElectro:
             # dataframe with start and end indices for each journey
             self.journeyStartEndIndices = pd.DataFrame({"start" : jt[0:-1], "end" : jt[1:]-1})
 
+        self.nJourneys = len(self.journeyTransitionIndices)
             
     def checkTrialValidity(self):
         """
@@ -311,144 +383,101 @@ class TrialElectro:
     
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
-    
-    
-    
-    
-    def trialPathFigure(self, legend = True, figSize=(10,10), zones=False, filePath=None, positionZones = False):
+   
+    def plotTrialSetup(self,ax=None,title = "", bridge=True,homeBase=True,lever=True):
         """
-        Plot the path of the animal on the arena with the lever
-        
-        Use to make sure that trial data extraction is working
-        
-        Argument
-                    
+        Function to draw arena, bridge and home base on an axis
         """
+        if ax is None:
+            ax = plt.gca()
+
         # to plot the arena circle
         arena=np.arange(start=0,stop=2*np.pi,step=0.02)
-        
-        
-        fig, axes = plt.subplots(1,1,figsize=figSize)
-        plt.subplots_adjust(wspace=0.3,hspace=0.3)
 
         # plot the arena and arena periphery
-        axes.set_aspect('equal', adjustable='box')
-        axes.set_title("{}, {}, {:.1f} sec".format(self.name,self.light,self.endTime-self.startTime))
-        axes.plot(np.cos(arena)*self.arenaRadius,np.sin(arena)*self.arenaRadius,label="Arena",color="gray")
-        axes.plot(np.cos(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,
-                     np.sin(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,label="Periphery",color="gray",linestyle='dashed')
-        axes.set_xlabel("cm")
-        axes.set_ylabel("cm")
-        
-        
-         ## mouse path
-        if positionZones == False:
-            axes.plot(self.mousePose.x,self.mousePose.y,color="black", label="path")
-        else :
-            # plot the position in different color depending on self.positionZone 
-            axes.plot(self.mousePose.x.loc[self.positionZones["homeBase"].to_numpy()],
-                      self.mousePose.y.loc[self.positionZones["homeBase"].to_numpy()],
-                      color="orange", label="Home base")
-            axes.plot(self.mousePose.x.loc[self.positionZones["arena"].to_numpy()],
-                      self.mousePose.y.loc[self.positionZones["arena"].to_numpy()],
-                      color="green", label="Arena")
-            axes.plot(self.mousePose.x.loc[self.positionZones["arenaCenter"].to_numpy()],
-                      self.mousePose.y.loc[self.positionZones["arenaCenter"].to_numpy()],
-                      color="pink", label="Arena center")
-            axes.plot(self.mousePose.x.loc[self.positionZones["bridge"].to_numpy()],
-                      self.mousePose.y.loc[self.positionZones["bridge"].to_numpy()],
-                      color="gray", label="Bridge")
-            axes.plot(self.mousePose.x.loc[self.positionZones["gap"].to_numpy()],
-                      self.mousePose.y.loc[self.positionZones["gap"].to_numpy()],
-                      color="yellow", label="Gap")
-            
-        
-        
-        ## lever
-        axes.plot(self.lever.pointsPlot[:,0],self.lever.pointsPlot[:,1], color = "gray")
-        axes.plot(self.lever.enterZonePointsPlot[:,0],self.lever.enterZonePointsPlot[:,1], color = "gray",linestyle="dotted")
-        axes.plot(self.lever.exitZonePointsPlot[:,0],self.lever.exitZonePointsPlot[:,1], color = "gray",linestyle="dotted")
-        
-        ## position of the mouse when pressing the lever
-        if self.nLeverPresses != 0:
-            axes.scatter(self.leverPress.mouseX,self.leverPress.mouseY,c="red")
-
-        if legend:
-            axes.legend(loc="upper right")
-        
-        if zones:
-            # draw the zones
-            for i in ["bridge","homeBase"]:
-                
-                rect = patches.Rectangle((self.zones[i][0], self.zones[i][1]), self.zones[i][2], self.zones[i][3], linewidth=1, edgecolor='gray', facecolor='none')
+        ax.set_aspect('equal', adjustable='box')
+        ax.set_title(title)
+        ax.plot(np.cos(arena)*self.arenaRadius,np.sin(arena)*self.arenaRadius,color="gray")
+        ax.plot(np.cos(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,
+                     np.sin(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,color="gray",linestyle='dashed')
+        ax.set_xlabel("cm")
+        ax.set_ylabel("cm")
+        zones=[]
+        if bridge:
+            zones.append("bridge")
+        if homeBase:
+            zones.append("homeBase")
+        if bridge or homeBase:
+            for i in zones:
+                rect = patches.Rectangle((self.zones[i][0],
+                                          self.zones[i][1]), 
+                                          self.zones[i][2],
+                                          self.zones[i][3], linewidth=1, edgecolor='gray', facecolor='none')
                 # Add the patch to the axes
-                axes.add_patch(rect)
-                
-            
-          
-            
-            
-        if filePath is not None:
-            print("Saving to " + filePath)
-            plt.savefig(filePath,bbox_inches = "tight")
-    
-    def trialJourneyFigure(self, zones = True, legend=True,figSize=(10,10), filePath=None,):
-        """
-        Plot the path of the animal during the different journeys (different colours)
-        
-        
-                    
-        """
-         # to plot the arena circle
-        arena=np.arange(start=0,stop=2*np.pi,step=0.02)
-                
-        fig, axes = plt.subplots(1,1,figsize=figSize)
-        plt.subplots_adjust(wspace=0.3,hspace=0.3)
+                ax.add_patch(rect)
+        if lever:
+            self.lever.plotLever(ax=ax)
+        return(ax)
 
-        # plot the arena and arena periphery
-        axes.set_aspect('equal', adjustable='box')
-        axes.set_title("{}, {}, {:.1f} sec".format(self.name,self.light,self.endTime-self.startTime))
-        axes.plot(np.cos(arena)*self.arenaRadius,np.sin(arena)*self.arenaRadius,label="Arena",color="gray")
-        axes.plot(np.cos(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,
-                     np.sin(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,label="Periphery",color="gray",linestyle='dashed')
-        axes.set_xlabel("cm")
-        axes.set_ylabel("cm")
-        
-        
-         ## mouse path
-        for j in range(len(self.journeyStartEndIndices.start)):
-    
-            start = self.journeyStartEndIndices["start"][j]
-            end = self.journeyStartEndIndices["end"][j]
-            axes.plot(self.mousePose.x.loc[start:end],self.mousePose.y.loc[start:end])
-            
-         
-        
-        ## lever
-        axes.plot(self.lever.pointsPlot[:,0],self.lever.pointsPlot[:,1], color = "gray")
-        axes.plot(self.lever.enterZonePointsPlot[:,0],self.lever.enterZonePointsPlot[:,1], color = "gray",linestyle="dotted")
-        axes.plot(self.lever.exitZonePointsPlot[:,0],self.lever.exitZonePointsPlot[:,1], color = "gray",linestyle="dotted")
-        
-        ## position of the mouse when pressing the lever
+    def removeAxisInfo(self,ax):
+        """
+        remove the ticks and labels from the axis
+        """
+        ax.set_xlabel("")
+        ax.set_ylabel("")
+        ax.set_frame_on(False)
+        ax.axes.get_yaxis().set_visible(False)
+        ax.axes.get_xaxis().set_visible(False)
+
+    def plotTrialPath(self,ax):
+        """
+        Plot the path of the mouse for the entire trial
+        """
+        ax.plot(self.mousePose.x,self.mousePose.y,color="black", label="path",zorder=1)
+    def plotLeverPresses(self,ax):
+        """
+        Plot the position of the animal when the mouse pressed the lever
+        """
         if self.nLeverPresses != 0:
-            axes.scatter(self.leverPress.mouseX,self.leverPress.mouseY,c="red")
+            ax.scatter(self.leverPress.mouseX,self.leverPress.mouseY,c="red",zorder=2,s=5)
 
-        if legend:
-            axes.legend(loc="upper right")
+    def plotWholeTrial(self,ax,title=""):
+        """
+        Plot path for the whole trial
+        """
+        self.plotTrialSetup(ax,title=title)
+        self.removeAxisInfo(ax)
+        self.plotTrialPath(ax)
+        self.plotLeverPresses(ax)
+
+    def plotTrialAndJourneys(self,axes,legendSize=5):
+        """
+        Function to plot on several axes
+        First axis: plot the path for the whole trial
+        Subsequent axes: plot of individual journeys
         
-        if zones:
-            # draw the zones
-            for i in ["bridge","homeBase"]:
-                
-                rect = patches.Rectangle((self.zones[i][0], self.zones[i][1]), self.zones[i][2], self.zones[i][3], linewidth=1, edgecolor='gray', facecolor='none')
-                # Add the patch to the axes
-                axes.add_patch(rect)
-                
-            
-          
-            
-            
-        if filePath is not None:
-            print("Saving to " + filePath)
-            plt.savefig(filePath,bbox_inches = "tight")
-    
+        If there are more journeys than axes available, only the first one will be plotted
+        """
+        if axes.ndim != 1:
+            print("axes should be a 1D array")
+
+        size = axes.size
+        Ax = axes[0]
+        title = "trial {}, {}, {:.1f} sec".format(self.trialNo,self.light,self.duration)
+        self.plotWholeTrial(Ax,title = title)
+
+        offset=1
+        for j in range(self.nJourneys):
+            if j+offset < size:
+                Ax = axes[offset+j]
+                title = "{}/{}".format(j+1,self.nJourneys)
+                self.plotTrialSetup(Ax,title=title)
+                self.removeAxisInfo(Ax)
+                self.journeyList[j].plotPath(Ax)
+                self.journeyList[j].plotLeverPresses(Ax)
+                Ax.legend(loc= 'lower left', prop={'size': legendSize})
+
+        # clear the unused axes
+        if self.nJourneys < size-1:
+            for i in range(self.nJourneys+1,size):
+                self.removeAxisInfo(axes[i])
