@@ -28,6 +28,7 @@ class Session:
         dataFileCheck: Boolean indicating whether to test for the presence of data file in the session directory
         fileNames: Dictionary to get important file names
         log Data frame with the content of the log file
+        mousePose: DataFrame with time, (resTime), x, y, hd
         
     Methods:
         checkSessionDirectory()
@@ -357,9 +358,10 @@ class Session:
         
         """
         self.mousePose = pd.DataFrame({"time":mousePose[:,7], # ROS time
-                         "x":mousePose[:,1],
-                         "y":mousePose[:,2],
-                         "hd":mousePose[:,4]})
+                                       "resTime":mousePose[:,0],
+                                       "x":mousePose[:,1],
+                                       "y":mousePose[:,2],
+                                       "hd":mousePose[:,4]})
         self.leverPose = pd.read_csv(self.path+"/leverPose",index_col = False) 
         for trial in self.trialList:
             trial.extractTrialFeatures(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],

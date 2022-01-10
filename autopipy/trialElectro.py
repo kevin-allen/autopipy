@@ -68,7 +68,7 @@ class TrialElectro:
         arenaCoordinatesFile: file with the arena coordinates
         bridgeCoordinatesFile: file with the bridge coordinates
         log: autopi log recorded during the task and loaded as a pandas dataframe
-        mousePose: DataFrame with time, x, y , hd. It has the data from the entire session
+        mousePose: DataFrame with time, resTime, x, y , hd. It has the data from the entire session
         leverPose: DataFrame loaded from leverPose file. It has the data from the entire session
         """
         
@@ -228,7 +228,7 @@ class TrialElectro:
         The time use is ROS time
         
         Argument:
-        mousePose: Pandas DataFrames with x,y,hd,time for the entire session
+        mousePose: Pandas DataFrames with x,y,hd,time, resTime, for the entire session
         
 
         Save it in self.mousePose

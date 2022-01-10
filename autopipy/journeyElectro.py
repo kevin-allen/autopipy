@@ -25,6 +25,7 @@ class JourneyElectro:
         sessionName: Name of the session in which the trial was performed
         trialNo: Trial number within the session
         jouneyNo: Jouney number within the trial
+        mousePose: DataFrame with 
         
         ...
     
@@ -105,6 +106,7 @@ class JourneyElectro:
                          np.zeros_like(jnk),
                          np.zeros_like(jnk),
                          self.mousePose.time.loc[indices].to_numpy(),
+                         self.mousePose.resTime.loc[indices].to_numpy()
                         )                        
                     ,axis=1)
     def createNavPath(self,startTime,endTime,target=None,name="navPath"):
@@ -112,7 +114,7 @@ class JourneyElectro:
         Wrapper to get the NavPath
         """
         mousePose = self.poseForNavPath(startTime,endTime)
-        return NavPath(pPose = mousePose, targetPose=None,name = name)
+        return NavPath(pPose = mousePose[:,0:7], targetPose=None,name = name,resTime=mousePose[:,7])
 
     def createNavPaths(self):
         """

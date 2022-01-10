@@ -33,21 +33,23 @@ class NavPath:
         medianHDDeviationToTarget
     Methods:
     """
-    def __init__(self, pPose, targetPose=None,name=None):
+    def __init__(self, pPose, targetPose=None,name=None,resTime=None):
         """
         Attributes:
-        pPose: 2D numpy array with 7 columns [x, y, z, yaw, pitch, roll, time], angles are in degrees
+        pPose: 2D numpy array with 7 or 8 columns [x, y, z, yaw, pitch, roll, time] or [x, y, z, yaw, pitch, roll, timeRos, timeRes], angles are in degrees
         targetPose: 2D numpy array with Pose (x, y, z, yaw, pitch, roll), angles are in degrees
+        resTime: 1D numpy array with alternative time (e.g. electrophysiology time)
         """
         
         self.pPose = pPose
         self.targetPose = targetPose
         self.name = name
+        self.resTime=resTime
         self.startTime = self.pPose[:,6].min()
         self.endTime=self.pPose[:,6].max()
         
-        if self.pPose.shape[1] != 7 :
-            print("{} :pPose should have 7 columns [x, y, z, yaw, pitch, roll, time]".format(self.name))
+        if self.pPose.shape[1] != 7 and self.pPose.shape[1] != 8:
+            print("{} :pPose should have 7 or 8 columns [x, y, z, yaw, pitch, roll, RosTime, (resTime)]".format(self.name))
             self.pPose = None
         if self.pPose.shape[0] < 2 :  
             #print("{} :pPose has a length of {}".format(self.name,self.pPose.shape[0]))
@@ -181,16 +183,26 @@ class NavPath:
         Return:
         DataFrame time, internal time, distance run, speed, x, y as columns
         """
-        
-        if self.pPose is not None :            
-            return pd.DataFrame({"name" : self.name,
-                                 "timeRos": self.pPose[:,6],
-                                 "iTime": self.internalTime,
-                                 "distance": self.distanceRun,
-                                 "speed": self.speed,
-                                 "x": self.pPose[:,0],
-                                 "y": self.pPose[:,1]})
-             
+        if self.pPose is not None :
+            if self.resTime is None:
+                return pd.DataFrame({"name" : self.name,
+                                     "timeRos": self.pPose[:,6],
+                                     "iTime": self.internalTime,
+                                     "distance": self.distanceRun,
+                                     "speed": self.speed,
+                                     "x": self.pPose[:,0],
+                                     "y": self.pPose[:,1]})
+            else:
+                return pd.DataFrame({"name" : self.name,
+                                     "timeRos": self.pPose[:,6],
+                                     "timeRes": self.resTime,
+                                     "iTime": self.internalTime,
+                                     "distance": self.distanceRun,
+                                     "speed": self.speed,
+                                     "x": self.pPose[:,0],
+                                     "y": self.pPose[:,1]})
+                
+
         
     
     def getVariables(self):
