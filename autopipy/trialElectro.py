@@ -60,7 +60,7 @@ class TrialElectro:
         
         self.test = None
     
-    def extractTrialFeatures(self,arenaCoordinatesFile,bridgeCoordinatesFile,log,mousePose,leverPose):
+    def extractTrialFeatures(self,arenaCoordinatesFile,bridgeCoordinatesFile,log,mousePose,leverPose,verbose=False):
         """
         Function to perform most of the analysis on a trial
         
@@ -93,9 +93,10 @@ class TrialElectro:
                    self.zones, self.arenaRadiusProportionToPeri,
                    self.leverPress,
                    self.mousePose,
-                   self.positionZones))
+                   self.positionZones,verbose=verbose))
         
-        
+        if verbose:
+            print("trialElectro.extractTrialFeature() Trial name:", self.name, "valid:", self.valid)
         
     
     def adjustTrialStart(self,sesMousePose):
@@ -116,6 +117,12 @@ class TrialElectro:
         # bridge
         mouseRelBridge = mousePoints-self.zones["bridge"][0:2]  # position relative to the bottom left of the bridge
         onBridge = np.logical_and(mouseRelBridge[:,1]> 0, mouseRelBridge[:,1] < self.zones["bridge"][3])
+        
+        if np.sum(onBridge) == 0:
+            print("no bridge time; no adjustTrialStart")
+            return
+            
+        
         firstBridge = np.argmax(onBridge)
 
         # distance from center
@@ -131,7 +138,11 @@ class TrialElectro:
             # bridge
             mouseRelBridge = mousePoints-self.zones["bridge"][0:2]  # position relative to the bottom left of the bridge
             onBridge = np.logical_and(mouseRelBridge[:,1]> 0, mouseRelBridge[:,1] < self.zones["bridge"][3])
-
+            
+            if np.sum(onBridge) == 0:
+                print("no bridge time before start; no adjustTrialStart")
+                return
+            
             lastBridgeIndex = np.where(onBridge)[0][-1]
             newStartTime= mp.iloc[lastBridgeIndex].time
 
@@ -246,6 +257,7 @@ class TrialElectro:
             print("{}, self.valid set to False".format(self.name))
             self.valid = False
         
+        
     def setLeverPosition(self,leverPose):
         """
         Extract the lever position data for this trial.
@@ -261,12 +273,17 @@ class TrialElectro:
         if len(self.leverPose.time)==0:
             print("{}, no lever position data during this trial".format(self.name))
             print("{}, self.valid set to False".format(self.name))
-            self.valid = False 
+            self.valid = False
+            self.lever = Lever()
+            return
         
         self.lever = Lever()
-        lp = np.array((stats.mode(self.leverPose["leverPressX"].to_numpy().astype(int))[0].item(), stats.mode(self.leverPose["leverPressY"].to_numpy().astype(int))[0].item()))
-        pl = np.array((stats.mode(self.leverPose["leverBoxPLX"].to_numpy().astype(int))[0].item(), stats.mode(self.leverPose["leverBoxPLY"].to_numpy().astype(int))[0].item()))
-        pr = np.array((stats.mode(self.leverPose["leverBoxPRX"].to_numpy().astype(int))[0].item(), stats.mode(self.leverPose["leverBoxPRY"].to_numpy().astype(int))[0].item()))
+        lp = np.array( (np.nanmedian(self.leverPose["leverPressX"].to_numpy()), 
+                        np.nanmedian(self.leverPose["leverPressY"].to_numpy())) )
+        pl = np.array((np.nanmedian(self.leverPose["leverBoxPLX"].to_numpy()), 
+                       np.nanmedian(self.leverPose["leverBoxPLY"].to_numpy())) )
+        pr = np.array((np.nanmedian(self.leverPose["leverBoxPRX"].to_numpy()), 
+                       np.nanmedian(self.leverPose["leverBoxPRY"].to_numpy())) )
         self.lever.calculatePose(lp = lp, pl = pl, pr = pr)
         
     def setArenaRadius(self,arenaRadius,arenaRadiusProportionToPeri=0.925):
@@ -298,7 +315,9 @@ class TrialElectro:
         index = (lever.time>self.startTime) & (lever.time<self.endTime) # boolean array
         leverPressTime = lever.time[index] # ROS time of lever
         
-        if len(leverPressTime) != 0:
+        self.nLeverPresses = len(leverPressTime)
+        
+        if self.nLeverPresses != 0 and len(self.mousePose.time) != 0 :
             # interpolate the x and y position of the animal at the lever press time
             fx = interp1d(self.mousePose.time, self.mousePose.x)
             fy = interp1d(self.mousePose.time, self.mousePose.y)
@@ -308,11 +327,14 @@ class TrialElectro:
             self.leverPress = pd.DataFrame({"time": leverPressTime,
                                             "mouseX":mouseX,
                                            "mouseY":mouseY})
-        self.nLeverPresses = len(leverPressTime)
-        if self.nLeverPresses == 0:
-            print("{}, no lever press".format(self.name))
+        
+        
+        if self.nLeverPresses == 0 or len(self.mousePose.time) == 0:
+            print("{}, no lever press or no mouse position".format(self.name))
             print("{}, self.valid set to False".format(self.name))
             self.valid=False
+            self.leverPress=[]
+            return
         
         if np.isnan(self.leverPress.mouseX.head(1).item()):
             print("{}, position of the animal at first lever press unknown".format(self.name))
@@ -373,7 +395,6 @@ class TrialElectro:
         
         Results stored in self.valid (True or False)
         """
-        self.valid=True
         
         if np.sum(self.positionZones["arena"])<0:
             print("the mouse was detected on the arena")
@@ -438,7 +459,7 @@ class TrialElectro:
         """
         Plot the position of the animal when the mouse pressed the lever
         """
-        if self.nLeverPresses != 0:
+        if self.nLeverPresses != 0 and len(self.leverPress)!=0 :
             ax.scatter(self.leverPress.mouseX,self.leverPress.mouseY,c="red",zorder=2,s=5)
 
     def plotWholeTrial(self,ax,title=""):

@@ -347,7 +347,7 @@ class Session:
         
         return [t for t in self.trialList if t.trialNo==trialNo][0]
     
-    def extractTrialElectroFeatures(self,mousePose):
+    def extractTrialElectroFeatures(self,mousePose,verbose=False):
         """
         Extract trial features for session with electrophysiology
         
@@ -357,18 +357,21 @@ class Session:
         The leverPose is generated from the lever_pose.ipynb` notebook
         
         """
+        if verbose:
+            print("Mouse pose format:", mousePose.shape)
         self.mousePose = pd.DataFrame({"time":mousePose[:,7], # ROS time
-                                       "resTime":mousePose[:,0],
+                                       "resTime":mousePose[:,0], # rec time
                                        "x":mousePose[:,1],
                                        "y":mousePose[:,2],
                                        "hd":mousePose[:,4]})
         self.leverPose = pd.read_csv(self.path+"/leverPose",index_col = False) 
+        
         for trial in self.trialList:
             trial.extractTrialFeatures(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],
                                        bridgeCoordinatesFile = self.fileNames["bridgeCoordinates"],
                                        log = self.log,
                                        mousePose = self.mousePose,
-                                       leverPose = self.leverPose)
+                                       leverPose = self.leverPose,verbose=verbose)
     
         self.nJourneys = np.sum([ t.nJourneys for t in self.trialList])
         self.nTrials = len(self.trialList)

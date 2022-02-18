@@ -33,7 +33,7 @@ class NavPath:
         medianHDDeviationToTarget
     Methods:
     """
-    def __init__(self, pPose, targetPose=None,name=None,resTime=None):
+    def __init__(self, pPose, targetPose=None,name=None,resTime=None,trialNo=None):
         """
         Attributes:
         pPose: 2D numpy array with 7 or 8 columns [x, y, z, yaw, pitch, roll, time] or [x, y, z, yaw, pitch, roll, timeRos, timeRes], angles are in degrees
@@ -45,6 +45,7 @@ class NavPath:
         self.targetPose = targetPose
         self.name = name
         self.resTime=resTime
+        self.trialNo=trialNo
         self.startTime = self.pPose[:,6].min()
         self.endTime=self.pPose[:,6].max()
         
@@ -91,8 +92,11 @@ class NavPath:
         
         # run distance from beginning of path
         self.distanceRun = np.cumsum(mv3)
+        self.distanceRunProp = self.distanceRun/np.nanmax(self.distanceRun)
+        
         # time from beginning
         self.internalTime = self.pPose[:,6]- self.pPose[:,6].min()
+        self.internalTimeProp = self.internalTime/np.nanmax(self.internalTime)
         
         # length of the path in 3D
         self.length = np.sum(mv3)
@@ -158,10 +162,15 @@ class NavPath:
         # if we have a target, calculate whether the path lead to the target       
         self.medianMVDeviationToTarget=np.NAN
         self.medianHDDeviationToTarget=np.NAN
+        
+        
         if targetPose is not None:
             ## mv heading relative to vector to target
             posi = self.pPose[:,0:3] # get position in the path
             posiT = self.targetPose[:,0:3] # the position of the target
+            
+            self.targetDistance = np.sqrt(np.sum((posi-posiT)**2,axis=1))
+            
             mv = np.diff(posi,axis = 0,prepend=np.NAN) # movement vector
             tv = posiT - posi # toTargetVector
             angles=self.vectorAngle(mv,tv,degrees=True,quadrant=False)
@@ -172,7 +181,10 @@ class NavPath:
             hdv = self.unityVectorsFromAngles(self.pPose[:,3]) # only yaw
             angles=self.vectorAngle(hdv,tv[:,0:2],degrees=True,quadrant=False)
             self.medianHDDeviationToTarget = np.nanmedian(angles)
-    
+        else:
+            self.targetDistance = np.zeros_like(self.pPose[:,0])
+            self.targetDistance[:]=np.nan
+            
     def instantaneousBehavioralVariables(self):
         """
         Method returning instantaneous behavioral variables from the path.
@@ -186,21 +198,29 @@ class NavPath:
         if self.pPose is not None :
             if self.resTime is None:
                 return pd.DataFrame({"name" : self.name,
+                                     "trialNo": self.trialNo,
                                      "timeRos": self.pPose[:,6],
                                      "iTime": self.internalTime,
+                                     "iTimeProp": self.internalTimeProp,
                                      "distance": self.distanceRun,
+                                     "distanceProp": self.distanceRunProp,
                                      "speed": self.speed,
                                      "x": self.pPose[:,0],
-                                     "y": self.pPose[:,1]})
+                                     "y": self.pPose[:,1],
+                                     "targetDistance":self.targetDistance})
             else:
                 return pd.DataFrame({"name" : self.name,
+                                     "trialNo": self.trialNo,
                                      "timeRos": self.pPose[:,6],
                                      "timeRes": self.resTime,
                                      "iTime": self.internalTime,
+                                     "iTimeProp": self.internalTimeProp,
                                      "distance": self.distanceRun,
+                                     "distanceProp":self.distanceRunProp,
                                      "speed": self.speed,
                                      "x": self.pPose[:,0],
-                                     "y": self.pPose[:,1]})
+                                     "y": self.pPose[:,1],
+                                     "targetDistance":self.targetDistance})
                 
 
         

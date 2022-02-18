@@ -90,7 +90,7 @@ class Lever:
         
         ## lever position (middle point)
         self.leverCenter = (lp+self.p4)/2
-        
+        #print("leverCenter:",self.leverCenter)
         ## vector from middle point to tip of lever
         vCenterToPress= lp-self.leverCenter
         
@@ -164,6 +164,7 @@ class Lever:
         self.exitZoneLeverPath = mpltPath.Path(self.exitZonePoints)
         
         
+        
     def rotateVector(self,v,angle,degree=True):
         # for other angles
         # A  cos(theta) -sin(theta)
@@ -179,8 +180,9 @@ class Lever:
         if ax is None:
             ax = plt.gca()
         
-        ax.plot(self.pointsPlot[:,0],self.pointsPlot[:,1], color = "gray")
-        ax.plot(self.enterZonePointsPlot[:,0],self.enterZonePointsPlot[:,1], color = "gray",linestyle="dotted")
-        ax.plot(self.exitZonePointsPlot[:,0],self.exitZonePointsPlot[:,1], color = "gray",linestyle="dotted")
-        
+        if hasattr(self, 'pointsPlot'):
+            ax.plot(self.pointsPlot[:,0],self.pointsPlot[:,1], color = "gray")
+            ax.plot(self.enterZonePointsPlot[:,0],self.enterZonePointsPlot[:,1], color = "gray",linestyle="dotted")
+            ax.plot(self.exitZonePointsPlot[:,0],self.exitZonePointsPlot[:,1], color = "gray",linestyle="dotted")
+
         

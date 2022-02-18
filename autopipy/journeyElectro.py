@@ -39,12 +39,16 @@ class JourneyElectro:
                  arenaRadiusProportionToPeri,
                  leverPresses,
                  mousePose,
-                 positionZones):
+                 positionZones,
+                 verbose = False):
         
         self.sessionName = sessionName
         self.trialNo = trialNo
         self.journeyNo = journeyNo
         self.name="{}_{}-{}".format(self.sessionName,self.trialNo,self.journeyNo)
+        if verbose:
+            print("J name:", self.name)
+            
         self.startIndex = startIndex
         self.endIndex = endIndex
         
@@ -53,12 +57,19 @@ class JourneyElectro:
         self.arenaRadiusProportionToPeri = arenaRadiusProportionToPeri
         self.arenaRadius = self.zones["arena"][2]
       
+        if self.startIndex >= self.endIndex:
+            raise ValueError("self.startIndex >= self.endIndex")
+    
         self.mousePose = mousePose.loc[self.startIndex:self.endIndex]
         self.startTime= self.mousePose.time.iloc[0]
         self.endTime = self.mousePose.time.iloc[-1]
         self.duration = self.endTime-self.startTime
         
-        self.leverPresses = leverPresses[leverPresses.time.between(self.startTime,self.endTime)]
+        if len(leverPresses) != 0:
+            self.leverPresses = leverPresses[leverPresses.time.between(self.startTime,self.endTime)]
+        else:
+            self.leverPresses = []
+            
         self.nLeverPresses = len(self.leverPresses)
         self.positionZones = positionZones.loc[self.startIndex:self.endIndex]
         
@@ -70,6 +81,11 @@ class JourneyElectro:
         Method to adjust the end of the journey to the time point at which the animal transitioned from the arena to the bridge.
         
         """
+        
+        if np.sum(self.positionZones.loca=="arena")==0:
+            print("No time on the arena, can't cut at last arena bridge transition")
+            return
+        
         
         lastArena=self.positionZones[self.positionZones.loca=="arena"].iloc[-1:].index.values[0]
         endingDf = self.positionZones.loc[lastArena:,:]
@@ -114,14 +130,18 @@ class JourneyElectro:
         Wrapper to get the NavPath
         """
         mousePose = self.poseForNavPath(startTime,endTime)
-        return NavPath(pPose = mousePose[:,0:7], targetPose=None,name = name,resTime=mousePose[:,7])
+        if mousePose.shape[0] < 1:
+            print("mousePose.shape[0] for a navPath in {} in journeyElectro.createNavPath".format(mousePose.shape[0]))
+            return None
+                             
+        return NavPath(pPose = mousePose[:,0:7], targetPose=target,name = name,resTime=mousePose[:,7],trialNo=self.trialNo)
 
     def createNavPaths(self):
         """
         Method that fills up the self.navPaths dictionary
         """
         self.navPaths={}
-        self.navPaths["all"] = self.createNavPath(self.startTime,self.endTime,target=None,name=self.name+"_"+"all")
+        self.navPaths["all"] = self.createNavPath(self.startTime,self.endTime,target=self.lever.pose,name=self.name+"_"+"all")
 
         if self.nLeverPresses > 0:
 
@@ -135,26 +155,33 @@ class JourneyElectro:
 
             
              # search before lever press
-            self.navPaths["searchPath"] = self.createNavPath(self.startTime,lpt,target=None,name=self.name+"_"+"searchPath")
-
+            self.navPaths["searchPath"] = self.createNavPath(self.startTime,lpt,target=self.lever.pose,name=self.name+"_"+"searchPath")
             
             # arriving at lever before lever press
             beforePress = self.mousePose.loc[self.mousePose.time < lpt]
             arrivingAtLeverTime = beforePress.time.loc[beforePress.atLever==False].max()
             # from start to arriving at the lever before the press
-            self.navPaths["searchToLeverPath"] = self.createNavPath(self.startTime,arrivingAtLeverTime,target=None,name=self.name+"_"+"searchToLeverPath")
+            self.navPaths["searchToLeverPath"] = self.createNavPath(self.startTime,arrivingAtLeverTime,target=self.lever.pose,name=self.name+"_"+"searchToLeverPath")
 
            
             # after lever press
-            self.navPaths["homingPath"] = self.createNavPath(lpt,self.endTime,target=None,name=self.name+"_"+"homingPath")
+            self.navPaths["homingPath"] = self.createNavPath(lpt,self.endTime,target=self.lever.pose,name=self.name+"_"+"homingPath")
             
             # leaving lever after lever press
             afterPress = self.mousePose.loc[self.mousePose.time > lpt]
             leavingLeverTime = afterPress.time.loc[afterPress.atLever==False].min()
             # from leaving the lever after the press to end
-            self.navPaths["homingFromLeavingLever"] = self.createNavPath(leavingLeverTime,self.endTime,target=None,name=self.name+"_"+"homingFromLeavingLever")
+            self.navPaths["homingFromLeavingLever"] = self.createNavPath(leavingLeverTime,self.endTime,target=self.lever.pose,name=self.name+"_"+"homingFromLeavingLever")
 
-
+            # check if any of the NavPath is None, if so remove all NavPaths but the all
+            if None in list(self.navPaths.values()):
+                print("We have a None navPath in our dictionary, only keeping the all path")
+                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever"]:
+                    del self.navPaths[n]
+                
+            
+            
+            
             
             
             
