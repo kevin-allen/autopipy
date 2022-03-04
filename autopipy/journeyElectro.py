@@ -179,11 +179,7 @@ class JourneyElectro:
                 for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever"]:
                     del self.navPaths[n]
                 
-            
-            
-            
-            
-            
+                   
             
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))

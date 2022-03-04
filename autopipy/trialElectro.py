@@ -98,6 +98,90 @@ class TrialElectro:
         if verbose:
             print("trialElectro.extractTrialFeature() Trial name:", self.name, "valid:", self.valid)
         
+        self.getHomingAngleAtPeriphery()
+    
+    def getHomingAngleAtPeriphery(self):
+        """
+        Find the angle at which the mouse reached the periphery after pressing the lever
+        
+        We calculate 2 angles
+        
+        1. self.homingAngleAtPeriphery: Angle between a vector [1,0] (from center of arena going East) and a vector from the center of arena going to the location where the animal reached periphery
+        2. self.homingAngleAtPeripheryLever: Angle between a vector from the lever to the bridge and a vector from the lever to the location where the animal reached periphery
+        
+        Note that self.homingAngleAtPeriphery is relative to vector [1,0] , whereas self.homingAngleAtPeripheryLever is relative to the correct homing direction from the lever
+        
+        Angles are obtained using np.arctan2
+        
+        """
+        if self.valid == False:
+            self.homingAngleAtPeriphery = np.nan
+            self.homingAngleAtPeripheryLever = np.nan
+            return 
+        
+        if len(self.journeyList) == 0:
+            self.homingAngleAtPeriphery = np.nan
+            self.homingAngleAtPeripheryLever = np.nan
+            return 
+            
+        # the last journey should be the one with lever press
+        j = self.journeyList[-1]
+
+        if "homingPath" not in j.navPaths.keys():
+            print("Could not find a homingPath in j.navPaths.keys()")
+            self.homingAngleAtPeriphery = np.nan
+            self.homingAngleAtPeripheryLever = np.nan
+            return
+    
+
+        x = j.navPaths["homingPath"].pPose[:,0] - self.zones["arena"][0] # bring the arena center to 0,0 if not the case
+        y = j.navPaths["homingPath"].pPose[:,1] - self.zones["arena"][1]
+        distanceCenter = np.sqrt(x**2+y**2)
+        peri = self.arenaRadius * self.arenaRadiusProportionToPeri
+        atPeriIndices = distanceCenter>peri
+        if np.sum(atPeriIndices) == 0:
+            print("no data point at periphery")
+            self.homingAngleAtPeriphery = np.nan
+            self.homingAngleAtPeripheryLever = np.nan
+            return
+
+        
+        ## lever center relative to center of the arena (0,0)
+        lever = self.lever.leverCenter- self.zones["arena"][0:2] # 1D array with x and y of lever
+        bridge = np.array([(self.zones["bridge"][0]+self.zones["bridge"][2])/2,self.zones["arena"][1]-self.zones["arena"][2]])
+              
+        # first x and y coordinate at periphery
+        xx= x[atPeriIndices][0]
+        yy= y[atPeriIndices][0]
+        peri = np.array([xx,yy])
+        
+        # get the angle with arctan2 to get our first angle relative to the vector going east
+        self.homingAngleAtPeriphery = np.arctan2(yy,xx)
+
+        
+        leverCorrectHomingVector = bridge - lever
+        leverHomingVector = peri - lever
+
+        leverCorrectHomingAngle = np.arctan2(leverCorrectHomingVector[1],leverCorrectHomingVector[0]) # relative to east
+
+        
+        rotation = leverCorrectHomingAngle # rotate the lever correct homing angle so that it would become 1,0 (east)
+        #print("rotation to reference:",rotation)
+        rotMat = np.array([[np.cos(rotation), -np.sin(rotation)],
+                               [np.sin(rotation), np.cos(rotation)]])
+
+        rotLeverCorrectHomingVector = leverCorrectHomingVector @ rotMat # that should be parallel to 1,0
+        #print("rotated lever correct homing vector, should be parallel to 1,0",rotLeverCorrectHomingVector)
+
+        rotLeverHomingVector = leverHomingVector @ rotMat # now we rotate the lever to periphery vector so that it is relative to the correct homing vector
+        #print("rotated lever homing vector",rotLeverHomingVector)
+
+        self.homingAngleAtPeripheryLever = np.arctan2(rotLeverHomingVector[1],rotLeverHomingVector[0]) # get the angle of reaching periphery relative to the correct angle
+
+        
+        
+        
+        
     
     def adjustTrialStart(self,sesMousePose):
         """
