@@ -57,6 +57,9 @@ class TrialElectro:
         self.arenaRadiusProportionToPeri = None
         self.mousePose = None
         self.leverPose = None
+        self.homingAngleAtPeriphery = np.nan
+        self.homingErrorAtPeriphery = np.nan
+        self.homingErrorAtPeripheryLever = np.nan
         
         self.test = None
     
@@ -97,6 +100,149 @@ class TrialElectro:
         
         if verbose:
             print("trialElectro.extractTrialFeature() Trial name:", self.name, "valid:", self.valid)
+        
+        self.getHomingAngleAtPeriphery()
+        
+        
+     
+        
+   
+    def getTrialVariables(self):
+        """
+        Return a pandas DataFrame with most trial variables
+        
+        We first save variables that we calculated with this class
+        Then we add the path variables
+        
+        """
+        
+        ## variables calculated in this Trial class
+        self.myDict = {"sessionName": [self.sessionName],
+                       "name": [self.name],
+                       "valid": [self.valid],
+                       "trialNo": [self.trialNo],
+                       "startTime": [self.startTime],
+                       "endTime": [self.endTime],
+                       "startTimeWS": [self.startTimeWS],
+                       "endTimeWS": [self.endTimeWS],
+                       "duration": [self.duration],
+                       "light": [self.light],
+                       "arenaRadiusCm": [self.arenaRadius],
+                       "nLeverPresses" : [self.nLeverPresses],
+                       "nJourneys" : [self.nJourneys],
+                       "homingAngleAtPeriphery" : [self.homingAngleAtPeriphery],
+                       "homingErrorAtPeriphery" : [self.homingErrorAtPeriphery],
+                       "homingErrorAtPeripheryLever" : [self.homingErrorAtPeripheryLever]}
+        
+        
+        df = pd.DataFrame(self.myDict)
+        
+       
+        return df
+
+
+
+
+    def getHomingAngleAtPeriphery(self):
+        """
+        Find the angle at which the mouse reached the periphery after pressing the lever
+        
+        We calculate 2 angles
+        
+        1. self.homingAngleAtPeriphery: Angle between a vector [1,0] (from center of arena going East) and a vector from the center of arena going to the location where the animal reached periphery
+        2. self.homingAngleAtPeripheryLever: Angle between a vector from the lever to the bridge and a vector from the lever to the location where the animal reached periphery
+        
+        Note that self.homingAngleAtPeriphery is relative to vector [1,0] , whereas self.homingAngleAtPeripheryLever is relative to the correct homing direction from the lever
+        
+        Angles are obtained using np.arctan2
+        
+        """
+        if self.valid == False:
+            self.homingAngleAtPeriphery = np.nan
+            self.homingErrorAtPeriphery = np.nan
+            self.homingErrorAtPeripheryLever = np.nan
+            return 
+        
+        if len(self.journeyList) == 0:
+            self.homingAngleAtPeriphery = np.nan
+            self.homingErrorAtPeriphery = np.nan
+            self.homingErrorAtPeripheryLever = np.nan
+            return 
+            
+        # the last journey should be the one with lever press
+        j = self.journeyList[-1]
+
+        if "homingPath" not in j.navPaths.keys():
+            print("Could not find a homingPath in j.navPaths.keys()")
+            self.homingAngleAtPeriphery = np.nan
+            self.homingErrorAtPeriphery = np.nan
+            self.homingErrorAtPeripheryLever = np.nan
+            return
+    
+
+        x = j.navPaths["homingPath"].pPose[:,0] - self.zones["arena"][0] # bring the arena center to 0,0 if not the case
+        y = j.navPaths["homingPath"].pPose[:,1] - self.zones["arena"][1]
+        distanceCenter = np.sqrt(x**2+y**2)
+        peri = self.arenaRadius * self.arenaRadiusProportionToPeri
+        atPeriIndices = distanceCenter>peri
+        if np.sum(atPeriIndices) == 0:
+            print("no data point at periphery")
+            self.homingAngleAtPeriphery = np.nan
+            self.homingErrorAtPeripheryLever = np.nan
+            return
+
+        
+        ## lever center relative to center of the arena (0,0)
+        lever = self.lever.leverCenter- self.zones["arena"][0:2] # 1D array with x and y of lever
+        ## bridge position relative to center of arena (0,0)
+        bridge = np.array([(self.zones["bridge"][0]+self.zones["bridge"][2])/2,self.zones["arena"][1]-self.zones["arena"][2]])
+              
+        # first x and y coordinate at periphery
+        xx= x[atPeriIndices][0]
+        yy= y[atPeriIndices][0]
+        peri = np.array([xx,yy]) # vector pointing to the position of the animal at first periphery.
+        
+        
+        # get the angle with arctan2 to get our first angle relative to the vector going east
+        self.homingAngleAtPeriphery = np.arctan2(yy,xx)
+
+        # get the angle between the vector to the bridge and the vector to the animal periphery
+        arenaCorrectHomingAngle = np.arctan2(bridge[1],bridge[0]) # relative to east
+
+                
+        rotation = arenaCorrectHomingAngle # rotate the lever correct homing angle so that it would become 1,0 (east)
+        #print("rotation to reference:",rotation)
+        rotMat = np.array([[np.cos(rotation), -np.sin(rotation)],
+                               [np.sin(rotation), np.cos(rotation)]])
+    
+        rotHomingVector = peri @ rotMat
+        self.homingErrorAtPeriphery = np.arctan2(rotHomingVector[1],rotHomingVector[0])
+        
+        ####################################################################
+        ## get accuracy considering lever to bridge as the correct vector ##
+        ####################################################################
+        leverCorrectHomingVector = bridge - lever
+        leverHomingVector = peri - lever
+
+        leverCorrectHomingAngle = np.arctan2(leverCorrectHomingVector[1],leverCorrectHomingVector[0]) # relative to east
+
+        
+        rotation = leverCorrectHomingAngle # rotate the lever correct homing angle so that it would become 1,0 (east)
+        #print("rotation to reference:",rotation)
+        rotMat = np.array([[np.cos(rotation), -np.sin(rotation)],
+                               [np.sin(rotation), np.cos(rotation)]])
+
+        rotLeverCorrectHomingVector = leverCorrectHomingVector @ rotMat # that should be parallel to 1,0
+        #print("rotated lever correct homing vector, should be parallel to 1,0",rotLeverCorrectHomingVector)
+
+        rotLeverHomingVector = leverHomingVector @ rotMat # now we rotate the lever to periphery vector so that it is relative to the correct homing vector
+        #print("rotated lever homing vector",rotLeverHomingVector)
+
+        self.homingErrorAtPeripheryLever = np.arctan2(rotLeverHomingVector[1],rotLeverHomingVector[0]) # get the angle of reaching periphery relative to the correct angle
+
+        
+        
+        
         
     
     def adjustTrialStart(self,sesMousePose):
@@ -484,7 +630,7 @@ class TrialElectro:
 
         size = axes.size
         Ax = axes[0]
-        title = "trial {}, {}, {:.1f} sec".format(self.trialNo,self.light,self.duration)
+        title = "trial {}, {}\n{:.1f} sec, peri:{:.2f}\nperi lever:{:.2f}".format(self.trialNo,self.light,self.duration,self.homingErrorAtPeriphery,self.homingErrorAtPeripheryLever)
         self.plotWholeTrial(Ax,title = title)
 
         offset=1

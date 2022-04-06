@@ -174,7 +174,7 @@ class NavPath:
             self.targetDistance = np.sqrt(np.nansum((posi-posiT)**2,axis=1))
             
             mv = np.diff(posi,axis = 0,prepend=np.NAN) # movement vector
-            tv = posiT - posi # toTargetVector
+            tv = posiT - posi # toTargetVector, where is the target relative to the animal
             angles=self.vectorAngle(mv,tv,degrees=True,quadrant=False)
             self.medianMVDeviationToTarget = np.nanmedian(angles)
             
@@ -183,9 +183,15 @@ class NavPath:
             hdv = self.unityVectorsFromAngles(self.pPose[:,3]) # only yaw
             angles=self.vectorAngle(hdv,tv[:,0:2],degrees=True,quadrant=False)
             self.medianHDDeviationToTarget = np.nanmedian(angles)
+            
+            # get vector to target
+            self.vTargetToAnimal = posi-posiT #target to the animal
+            
         else:
             self.targetDistance = np.zeros_like(self.pPose[:,0])
             self.targetDistance[:]=np.nan
+            self.vTargetToAnimal = np.zeros_like(self.pPose[:,0:2])
+            self.vTargetToAnimal[:] = np.nan
             
     def instantaneousBehavioralVariables(self):
         """
@@ -209,7 +215,9 @@ class NavPath:
                                      "speed": self.speed,
                                      "x": self.pPose[:,0],
                                      "y": self.pPose[:,1],
-                                     "targetDistance":self.targetDistance})
+                                     "targetDistance":self.targetDistance,
+                                     "targetToAnimalX":self.vTargetToAnimal[:,0],
+                                     "targetToAnimalY":self.vTargetToAnimal[:,1]})
             else:
                 return pd.DataFrame({"name" : self.name,
                                      "trialNo": self.trialNo,
@@ -222,10 +230,9 @@ class NavPath:
                                      "speed": self.speed,
                                      "x": self.pPose[:,0],
                                      "y": self.pPose[:,1],
-                                     "targetDistance":self.targetDistance})
-                
-
-        
+                                     "targetDistance":self.targetDistance,
+                                     "targetToAnimalX":self.vTargetToAnimal[:,0],
+                                     "targetToAnimalY":self.vTargetToAnimal[:,1]})
     
     def getVariables(self):
         self.myDict = {

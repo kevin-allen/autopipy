@@ -448,7 +448,9 @@ class Session:
         self.trialVariables = pd.concat(dfList)
         self.trialVariables["subject"]=self.subject # add the subject name to the dataframe
         self.trialVariables["date"]= self.sessionDateTime # add the data to the data frame
-    
+        return self.trialVariables
+        
+        
     def getTrialPathSpeedProfile(self,pathName="searchTotal"):
         """
         Get a numpy array containing the speed profile of a given path
@@ -599,3 +601,22 @@ class Session:
                 if currentRow == nRow-1:
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close()
+    def plotNavPath(self,ax,navPathType="all",light="light"):
+        """
+        Plot all the navPath object of one type for the session
+        """
+        
+        t = self.trialList[-1]
+        t.plotTrialSetup(ax=ax,title = "", bridge=True,homeBase=True,lever=False)
+        
+        for t in self.trialList:
+            #print(t.trialNo)
+            if t.valid and t.light == light and t.journeyList is not None and len(t.journeyList) > 0:
+                j = t.journeyList[-1] # last journey is the one with lever press
+                if navPathType in j.navPaths.keys():
+                    nav = j.navPaths[navPathType]
+                    if nav.pPose is None:
+                        print("t.trialNo: {} nav.pPose = None".format(t.trialNo))
+                    ax.plot(nav.pPose[:,0],nav.pPose[:,1])
+        
+        ax.axis("off")

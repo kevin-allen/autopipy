@@ -76,6 +76,12 @@ class JourneyElectro:
         self.cutAtLastArenaBridgeTransition()
         self.createNavPaths()
         
+        if np.sum(self.positionZones.loca=="arena")==0:
+            print("trialNo: {}, journeyNo: {}, not time on the arena, we will only have a `all` navPath".format(self.trialNo,self.journeyNo))
+            self.navPaths={}
+            self.navPaths["all"] = self.createNavPath(self.startTime,self.endTime,target=self.lever.pose,name=self.name+"_"+"all")
+
+        
     def cutAtLastArenaBridgeTransition(self):
         """
         Method to adjust the end of the journey to the time point at which the animal transitioned from the arena to the bridge.
@@ -130,6 +136,9 @@ class JourneyElectro:
         Wrapper to get the NavPath
         """
         mousePose = self.poseForNavPath(startTime,endTime)
+        if mousePose is None:
+            print("mousePose is None for a navPath, return None")
+            return None
         if mousePose.shape[0] < 1:
             print("mousePose.shape[0] for a navPath in {} in journeyElectro.createNavPath".format(mousePose.shape[0]))
             return None
@@ -173,17 +182,21 @@ class JourneyElectro:
             # from leaving the lever after the press to end
             self.navPaths["homingFromLeavingLever"] = self.createNavPath(leavingLeverTime,self.endTime,target=self.lever.pose,name=self.name+"_"+"homingFromLeavingLever")
 
-            # check if any of the NavPath is None, if so remove all NavPaths but the all
-            if None in list(self.navPaths.values()):
+            # check if any of the NavPath is None, if so remove all NavPaths but the all  
+            if None in self.navPaths.values():
                 print("We have a None navPath in our dictionary, only keeping the all path")
                 for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever"]:
                     del self.navPaths[n]
-                
             
             
             
+            # check if any of the NavPath is None, if so remove all NavPaths but the all  
+            if any([nv.pPose is None for nv in self.navPaths.values()]):
+                print("We have a navPath with empty pPose in our dictionary, only keeping the all path")
+                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever"]:
+                    del self.navPaths[n]
             
-            
+                   
             
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
