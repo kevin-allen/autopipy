@@ -62,8 +62,8 @@ class ArenaDetector:
                 blurred = cv2.medianBlur(img,blur)
                 cimg = cv2.cvtColor(blurred,cv2.COLOR_GRAY2BGR)
                 circles = cv2.HoughCircles(blurred,cv2.HOUGH_GRADIENT,1,50,
-                                          param1=70,param2=50,minRadius=minRadius,maxRadius=maxRadius)
-
+                                          param1=75,param2=45,minRadius=minRadius,maxRadius=maxRadius)#p1=70,p2=50 
+## next try was p1=75, p2=45
                 circles = np.uint16(np.around(circles))
 
                 for i in circles[0,:]:
