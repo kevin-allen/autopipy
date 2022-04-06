@@ -57,6 +57,7 @@ class TrialElectro:
         self.arenaRadiusProportionToPeri = None
         self.mousePose = None
         self.leverPose = None
+        self.coordinateAtPeriphery = None
         self.homingAngleAtPeriphery = np.nan
         self.homingErrorAtPeriphery = np.nan
         self.homingErrorAtPeripheryLever = np.nan
@@ -200,6 +201,7 @@ class TrialElectro:
         # first x and y coordinate at periphery
         xx= x[atPeriIndices][0]
         yy= y[atPeriIndices][0]
+        self.coordinateAtPeriphery = np.array([xx,yy])
         peri = np.array([xx,yy]) # vector pointing to the position of the animal at first periphery.
         
         

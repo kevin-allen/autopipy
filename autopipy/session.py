@@ -601,22 +601,39 @@ class Session:
                 if currentRow == nRow-1:
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close()
-    def plotNavPath(self,ax,navPathType="all",light="light"):
+    def plotNavPath(self,ax,navPathType="all",light="light", trialList=None,plotAllNavPath=False,plotPeriphery=False,plotHomeBase=True,plotBridge=True):
         """
         Plot all the navPath object of one type for the session
+        
+        trialList: list of trial or trialElectro objects.
         """
-        
         t = self.trialList[-1]
-        t.plotTrialSetup(ax=ax,title = "", bridge=True,homeBase=True,lever=False)
+        t.plotTrialSetup(ax=ax,title = "", bridge=plotBridge,homeBase=plotHomeBase,lever=False)
         
-        for t in self.trialList:
-            #print(t.trialNo)
+        if trialList is None:
+            trialList = self.trialList
+
+        for t in trialList:
+   
             if t.valid and t.light == light and t.journeyList is not None and len(t.journeyList) > 0:
                 j = t.journeyList[-1] # last journey is the one with lever press
+                
+                if plotAllNavPath==True:
+                    nav = j.navPaths["all"]
+                    if nav.pPose is None:
+                        print("t.trialNo: {} nav.pPose = None".format(t.trialNo))
+                    else:
+                        ax.plot(nav.pPose[:,0],nav.pPose[:,1],color="grey",alpha=0.15,zorder=0)
+         
+
                 if navPathType in j.navPaths.keys():
                     nav = j.navPaths[navPathType]
                     if nav.pPose is None:
                         print("t.trialNo: {} nav.pPose = None".format(t.trialNo))
-                    ax.plot(nav.pPose[:,0],nav.pPose[:,1])
+                    else:
+                        ax.plot(nav.pPose[:,0],nav.pPose[:,1],zorder=1)
+                
+                if plotPeriphery==True:
+                    ax.scatter(t.coordinateAtPeriphery[0],t.coordinateAtPeriphery[1],color="red",zorder=2)
         
         ax.axis("off")
