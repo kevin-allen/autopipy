@@ -41,13 +41,12 @@ class NavPath:
         resTime: 1D numpy array with alternative time (e.g. electrophysiology time)
         """
         
+
         self.pPose = pPose
         self.targetPose = targetPose
         self.name = name
         self.resTime=resTime
         self.trialNo=trialNo
-        self.startTime = self.pPose[:,6].min()
-        self.endTime=self.pPose[:,6].max()
         
         if self.pPose.shape[1] != 7 and self.pPose.shape[1] != 8:
             print("{} :pPose should have 7 or 8 columns [x, y, z, yaw, pitch, roll, RosTime, (resTime)]".format(self.name))
@@ -85,13 +84,16 @@ class NavPath:
             
             return
         
+
+        self.startTime = self.pPose[:,6].min()
+        self.endTime=self.pPose[:,6].max()
         
         posi = self.pPose[:,0:3] # get position data
         self.mv = np.diff(posi,axis = 0,append=np.nan) # movement vector in x y z dimensions
-        mv3 = np.sqrt(np.sum(self.mv*self.mv,axis = 1)) # length of vectors (pythagoras) 
+        mv3 = np.sqrt(np.nansum(self.mv*self.mv,axis = 1)) # length of vectors (pythagoras) 
         
         # run distance from beginning of path
-        self.distanceRun = np.cumsum(mv3)
+        self.distanceRun = np.nancumsum(mv3)
         self.distanceRunProp = self.distanceRun/np.nanmax(self.distanceRun)
         
         # time from beginning
@@ -99,14 +101,14 @@ class NavPath:
         self.internalTimeProp = self.internalTime/np.nanmax(self.internalTime)
         
         # length of the path in 3D
-        self.length = np.sum(mv3)
-        
+        self.length = np.nansum(mv3)
+
         # difference between largest and smallest time point
-        self.duration = np.max(pPose[:,6])-np.min(pPose[:,6]) # duration from the start to the end
+        self.duration = np.nanmax(pPose[:,6])-np.nanmin(pPose[:,6]) # duration from the start to the end
         
         # (first to last Pose distance) / length of the path, 1 if straght line, 0 if came back to same point
         mvEnds=posi[-1,:]-posi[0,:]
-        self.distanceEnds =  np.sqrt(np.sum(mvEnds*mvEnds))
+        self.distanceEnds =  np.sqrt(np.nansum(mvEnds*mvEnds))
         self.meanVectorLengthPosi =  self.distanceEnds/ self.length # mean vector length of position vectors
         self.meanVectorDirectionPosi = self.direction(mvEnds[0],mvEnds[1]) # mean direction of the movement
         
@@ -145,7 +147,7 @@ class NavPath:
         
         oriDiff=oriDiff[~np.isnan(oriDiff).any(axis=1), :]
         oriDiff = np.where(oriDiff>180,360-oriDiff,oriDiff)
-        self.oriAngularDistance = np.sum(oriDiff, axis= 0)
+        self.oriAngularDistance = np.nansum(oriDiff, axis= 0)
         self.oriAngularSpeed = self.oriAngularDistance/self.duration
         
         # calculate the sum of difference in movement direction for x, y, z dimensions
@@ -155,7 +157,7 @@ class NavPath:
             v1 = np.reshape(self.mv[i,:],(1,-1))
             v2 = np.reshape(self.mv[i+1,:],(1,-1))
             mvAngle[i] = self.vectorAngle(v=v1,rv=v2,degrees=True) 
-        self.mvAngularDistance = np.sum(mvAngle)
+        self.mvAngularDistance = np.nansum(mvAngle)
         self.mvAngularSpeed=self.mvAngularDistance/self.duration
           
         
@@ -169,7 +171,7 @@ class NavPath:
             posi = self.pPose[:,0:3] # get position in the path
             posiT = self.targetPose[:,0:3] # the position of the target
             
-            self.targetDistance = np.sqrt(np.sum((posi-posiT)**2,axis=1))
+            self.targetDistance = np.sqrt(np.nansum((posi-posiT)**2,axis=1))
             
             mv = np.diff(posi,axis = 0,prepend=np.NAN) # movement vector
             tv = posiT - posi # toTargetVector, where is the target relative to the animal
@@ -273,16 +275,16 @@ class NavPath:
         if v.shape[1]!=rv.shape[1]:
             print("v and rv should have the same number of column")
             return
-        vLen = np.sqrt(np.sum(v*v,axis=1))
+        vLen = np.sqrt(np.nansum(v*v,axis=1))
         vLen[vLen==0] = np.NAN
-        rvLen = np.sqrt(np.sum(rv*rv,axis=1))
+        rvLen = np.sqrt(np.nansum(rv*rv,axis=1))
 
         # get unitary vectors
         uv = v/vLen[:,None]
         urv = rv/rvLen[:,None]
 
         # get the angle, dot product, then acos
-        theta = np.arccos(np.clip(np.sum(uv*urv,axis=1),  -1.0, 1.0))
+        theta = np.arccos(np.clip(np.nansum(uv*urv,axis=1),  -1.0, 1.0))
 
         if quadrant:
             # deal with the 3 and 4 quadrant
@@ -325,8 +327,8 @@ class NavPath:
             theta = theta*np.pi/180
         # get the unity vectors for these angles
         v = np.stack((np.cos(theta),np.sin(theta)),axis =1)
-        mv = np.sum(v,axis=0)/len(v)
-        length = np.sqrt(np.sum((mv*mv)))
+        mv = np.nansum(v,axis=0)/len(v)
+        length = np.sqrt(np.nansum((mv*mv)))
         
         return length
     
@@ -346,7 +348,7 @@ class NavPath:
             theta = theta*np.pi/180
         # get the unity vectors for these angles
         v = np.stack((np.cos(theta),np.sin(theta)),axis =1)
-        mv = np.sum(v,axis=0)/len(v)
+        mv = np.nansum(v,axis=0)/len(v)
         
         direction = np.arctan2(mv[1],mv[0])
         if negativeAngle==False:

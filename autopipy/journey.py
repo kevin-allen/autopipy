@@ -189,6 +189,7 @@ class Journey:
             bridgePose = self.poseFromBridgeCoordinates()
             
             # get the path variables using the NavPath class
+            #print(allPose)
             self.pathD["all"] = NavPath(pPose = allPose,name = "all")
             self.pathD["searchTotal"] = NavPath(pPose = searchTotalPose,
                                               targetPose=leverPose,name = "searchTotal")
@@ -227,6 +228,12 @@ class Journey:
         Return Pose as a numpy array with 7 columns
 
         """
+        #if len(self.trialVideoLog.timeWS.loc[startIndex:endIndex].to_numpy())==len(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()):
+        #    trialVideoLog_timeWS=self.trialVideoLog.timeWS.loc[startIndex:endIndex].to_numpy()
+        #else:
+        #    trialVideoLog_timeWS=self.trialVideoLog.timeWS.loc[startIndex:(startIndex+len(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy())-1)].to_numpy()
+        #    print(len(trialVideoLog_timeWS))
+        #    print(len(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()))
         return np.stack((self.trialML.loc[startIndex:endIndex,"mouseX"].to_numpy(),
                     self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy(),
                     np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
@@ -234,6 +241,7 @@ class Journey:
                     np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
                     np.zeros_like(self.trialML.loc[startIndex:endIndex,"mouseY"].to_numpy()),
                     self.trialVideoLog.timeWS.loc[startIndex:endIndex].to_numpy()),axis=1)
+                        
     def poseFromLeverPositionDictionary(self) :
         """
         Create a numpy array containing the pose (x, y, z, yaw, pitch, roll, time)  

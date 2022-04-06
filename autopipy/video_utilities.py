@@ -1,4 +1,5 @@
-import os.path
+import os
+#import os.path
 import numpy as np
 import cv2
 import sys
@@ -199,7 +200,8 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
                                       arenaCircleMethod = "min",
                                           numFramesArenaDetection=1000,
                                       numFramesBridgeDetection=1000,
-                                      labelDlcMouseLeverVideo=False):
+                                      labelDlcMouseLeverVideo=False,
+                                      checkGPURunning=False):
     """
     Function to do all the video processing to get the position of the animal on the arena
 
@@ -209,92 +211,104 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
         ses: A session object
         modelDir: the directory containing the different dlc models
     """
+    if checkGPURunning:
+        if not os.path.exists("/tmp/GPURunning"):
+            print("There is no other process using your GPU. GPU will be used by this function.")
+            with open("/tmp/GPURunning", 'w', encoding='utf-8') as GPUfile:
+                GPUfile.write("DLC")
 
-    start_time = datetime.now()
-    print("Startint at", start_time.strftime("%H:%M:%S"))
+        else:
+            raise ValueError("There is another process running GPU. Wait until it has finished or stop it before running this function.")
     
-    videoFile = ses.fileNames["arena_top.avi"] #Nice trick to get file names using a dict
-    arenaImageFile=ses.path+"/arenaDetection.png"
-    arenaD = ArenaDetector()
-    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=arenaMinRadius, 
-                                  maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
-    
-    arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
+    try:
+        start_time = datetime.now()
+        print("Startint at", start_time.strftime("%H:%M:%S"))
 
-    configFile = modelDir+"/"+ bridge640_480Model+"/config.yaml"
-    if not os.path.isfile(configFile):
-        print(configFile+ " is missing")
-        return
-    #configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
-    bridgeImageFile = ses.path+"/bridgeDetection.png"
-    bridgeD = BridgeDetector(pathConfigFile=configFile)
-    bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=videoFile,numFrames=numFramesBridgeDetection, skip=30)
-    bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
+        videoFile = ses.fileNames["arena_top.avi"] #Nice trick to get file names using a dict
+        arenaImageFile=ses.path+"/arenaDetection.png"
+        arenaD = ArenaDetector()
+        aCoord = arenaD.detectArenaCoordinates(pathVideoFile=videoFile, minRadius=arenaMinRadius, 
+                                      maxRadius=arenaMaxRadius, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
 
-    now = datetime.now()
-    duration = now-start_time
-    print("Time elapsed", str(duration))  
-    
-    videoFile=ses.fileNames["arena_top.avi"]
-    croppedVideoFile = os.path.splitext(videoFile)[0]+".cropped.avi"
-    maskCropVideoToBridgeArena(pathVideoFile=videoFile, pathOutputFile=croppedVideoFile, 
-                               arenaCoordinates=aCoord, bridgeCoordinates = bCoord)
+        arenaD.labelImage(pathVideoFile=videoFile,outputImageFile=arenaImageFile)
 
-    now = datetime.now()
-    duration = now-start_time
-    print("Time elapsed", str(duration))
-    
-    configFile=modelDir+"/"+ mouseLeverModel + "/config.yaml"
-    if not os.path.isfile(configFile):
-        print(configFile+ " is missing")
-        return
-    
-    croppedVideoFile = os.path.splitext(videoFile)[0]+".cropped.avi"
-    mouseLeverD = MouseLeverDetector(pathConfigFile=configFile)
-    mouseLeverD.inferenceVideo(pathVideoFile=croppedVideoFile,overwrite=True)
+        configFile = modelDir+"/"+ bridge640_480Model+"/config.yaml"
+        if not os.path.isfile(configFile):
+            print(configFile+ " is missing")
+            return
+        #configFile = modelDir+"/detectBridgeDLC/arena_top-Allen-2020-08-20/config.yaml"
+        bridgeImageFile = ses.path+"/bridgeDetection.png"
+        bridgeD = BridgeDetector(pathConfigFile=configFile)
+        bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=videoFile,numFrames=numFramesBridgeDetection, skip=30)
+        bridgeD.labelImage(pathVideoFile=videoFile,outputImageFile=bridgeImageFile)
 
-    # save position data to file
-    mouseLeverD.savePositionOrientationToFile(pathVideoFile=croppedVideoFile, 
-                                              fileName = ses.fileNames["mouseLeverPosition.csv"])
-        
-    now = datetime.now()
-    duration = now-start_time
-    print("Time elapsed", str(duration))
-    
-    if labelDlcMouseLeverVideo :
-        labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
-        mouseLeverD.labelVideo(pathVideoFile=croppedVideoFile)
+        now = datetime.now()
+        duration = now-start_time
+        print("Time elapsed", str(duration))  
 
-    now = datetime.now()
-    duration = now-start_time
-    print("Time elapsed", str(duration))
-    
-    
-    arenaImageFile=ses.path+"/arenaDetectionCropped.png"
-    arenaD = ArenaDetector()
-    aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=aCoord[2]-5, 
-                                  maxRadius=aCoord[2]+5, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
-    arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
-    np.savetxt(ses.fileNames["arenaCoordinates"],aCoord,delimiter=",") 
+        videoFile=ses.fileNames["arena_top.avi"]
+        croppedVideoFile = os.path.splitext(videoFile)[0]+".cropped.avi"
+        maskCropVideoToBridgeArena(pathVideoFile=videoFile, pathOutputFile=croppedVideoFile, 
+                                   arenaCoordinates=aCoord, bridgeCoordinates = bCoord)
 
-    configFile = modelDir + "/" + bridge480_480Model + "/config.yaml"
-    if not os.path.isfile(configFile):
-        print(configFile+ " is missing")
-        return
-    
-    bridgeImageFile = ses.path+"/bridgeDetectionCropped.png"
-    bridgeD = BridgeDetector(pathConfigFile=configFile)
-    bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=numFramesBridgeDetection, skip=30)
-    bridgeD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=bridgeImageFile)
-    np.savetxt(ses.fileNames["bridgeCoordinates"],bCoord,delimiter=",")
-    
-    outputImageFile=ses.path+"/arenaBridgeDetectionCropped.png"
-    arenaBridgeDetectionImage(pathVideoFile=croppedVideoFile,
-                              outputImageFile=outputImageFile,
-                              arenaCoordinates = aCoord,
-                              bridgeCoordinates = bCoord)
-    end_time = datetime.now()
-    duration = end_time-start_time
-    print("Ending at ", end_time.strftime("%H:%M:%S"))
-    print("***Total duration: {} ***".format(str(duration)))
+        now = datetime.now()
+        duration = now-start_time
+        print("Time elapsed", str(duration))
 
+        configFile=modelDir+"/"+ mouseLeverModel + "/config.yaml"
+        if not os.path.isfile(configFile):
+            print(configFile+ " is missing")
+            return
+
+        croppedVideoFile = os.path.splitext(videoFile)[0]+".cropped.avi"
+        mouseLeverD = MouseLeverDetector(pathConfigFile=configFile)
+        mouseLeverD.inferenceVideo(pathVideoFile=croppedVideoFile,overwrite=True)
+
+        # save position data to file
+        mouseLeverD.savePositionOrientationToFile(pathVideoFile=croppedVideoFile, 
+                                                  fileName = ses.fileNames["mouseLeverPosition.csv"])
+
+        now = datetime.now()
+        duration = now-start_time
+        print("Time elapsed", str(duration))
+
+        if labelDlcMouseLeverVideo :
+            labeledVideoFile = os.path.splitext(croppedVideoFile)[0]+".labeled.avi"
+            mouseLeverD.labelVideo(pathVideoFile=croppedVideoFile)
+
+        now = datetime.now()
+        duration = now-start_time
+        print("Time elapsed", str(duration))
+
+
+        arenaImageFile=ses.path+"/arenaDetectionCropped.png"
+        arenaD = ArenaDetector()
+        aCoord = arenaD.detectArenaCoordinates(pathVideoFile=croppedVideoFile, minRadius=aCoord[2]-5, 
+                                      maxRadius=aCoord[2]+5, numFrames=numFramesArenaDetection, blur=11, circleMethod=arenaCircleMethod)
+        arenaD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=arenaImageFile)
+        np.savetxt(ses.fileNames["arenaCoordinates"],aCoord,delimiter=",") 
+
+        configFile = modelDir + "/" + bridge480_480Model + "/config.yaml"
+        if not os.path.isfile(configFile):
+            print(configFile+ " is missing")
+            return
+
+        bridgeImageFile = ses.path+"/bridgeDetectionCropped.png"
+        bridgeD = BridgeDetector(pathConfigFile=configFile)
+        bCoord = bridgeD.detectBridgeCoordinates(pathVideoFile=croppedVideoFile,numFrames=numFramesBridgeDetection, skip=30)
+        bridgeD.labelImage(pathVideoFile=croppedVideoFile,outputImageFile=bridgeImageFile)
+        np.savetxt(ses.fileNames["bridgeCoordinates"],bCoord,delimiter=",")
+
+        outputImageFile=ses.path+"/arenaBridgeDetectionCropped.png"
+        arenaBridgeDetectionImage(pathVideoFile=croppedVideoFile,
+                                  outputImageFile=outputImageFile,
+                                  arenaCoordinates = aCoord,
+                                  bridgeCoordinates = bCoord)
+        end_time = datetime.now()
+        duration = end_time-start_time
+        print("Ending at ", end_time.strftime("%H:%M:%S"))
+        print("***Total duration: {} ***".format(str(duration)))
+    
+    finally:
+        if checkGPURunning:
+            os.remove("/tmp/GPURunning")
