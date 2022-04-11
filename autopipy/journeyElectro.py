@@ -74,6 +74,8 @@ class JourneyElectro:
         self.positionZones = positionZones.loc[self.startIndex:self.endIndex]
         
         self.cutAtLastArenaBridgeTransition()
+        
+        # generate all the nav paths by filling self.navPaths (a dictionary)
         self.createNavPaths()
         
         if np.sum(self.positionZones.loca=="arena")==0:

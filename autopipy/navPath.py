@@ -175,6 +175,9 @@ class NavPath:
             
             mv = np.diff(posi,axis = 0,prepend=np.NAN) # movement vector
             tv = posiT - posi # toTargetVector, where is the target relative to the animal
+            
+            
+            
             angles=self.vectorAngle(mv,tv,degrees=True,quadrant=False)
             self.medianMVDeviationToTarget = np.nanmedian(angles)
             
@@ -184,8 +187,12 @@ class NavPath:
             angles=self.vectorAngle(hdv,tv[:,0:2],degrees=True,quadrant=False)
             self.medianHDDeviationToTarget = np.nanmedian(angles)
             
-            # get vector to target
-            self.vTargetToAnimal = posi-posiT #target to the animal
+            # get a vector from target to animal 
+            self.vTargetToAnimal = posi-posiT # contains 3 columns x,y,z
+            
+            # replace the head direction data with the angle between the vector of the animal position (origin 0,0) and the vector 1,0
+            self.targetToAnimalAngle = np.arctan2(self.vTargetToAnimal[:,1], self.vTargetToAnimal[:,0]) # relative to 1,0 vector
+            
             
         else:
             self.targetDistance = np.zeros_like(self.pPose[:,0])
@@ -217,7 +224,8 @@ class NavPath:
                                      "y": self.pPose[:,1],
                                      "targetDistance":self.targetDistance,
                                      "targetToAnimalX":self.vTargetToAnimal[:,0],
-                                     "targetToAnimalY":self.vTargetToAnimal[:,1]})
+                                     "targetToAnimalY":self.vTargetToAnimal[:,1],
+                                     "targetToAnimalAngle":self.targetToAnimalAngle})
             else:
                 return pd.DataFrame({"name" : self.name,
                                      "trialNo": self.trialNo,
@@ -232,7 +240,8 @@ class NavPath:
                                      "y": self.pPose[:,1],
                                      "targetDistance":self.targetDistance,
                                      "targetToAnimalX":self.vTargetToAnimal[:,0],
-                                     "targetToAnimalY":self.vTargetToAnimal[:,1]})
+                                     "targetToAnimalY":self.vTargetToAnimal[:,1],
+                                     "targetToAnimalAngle":self.targetToAnimalAngle})
     
     def getVariables(self):
         self.myDict = {
