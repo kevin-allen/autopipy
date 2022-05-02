@@ -40,6 +40,7 @@ class JourneyElectro:
                  leverPresses,
                  mousePose,
                  positionZones,
+                 leverZoneMaxDistance,
                  verbose = False):
         
         self.sessionName = sessionName
@@ -56,6 +57,7 @@ class JourneyElectro:
         self.zones = zones
         self.arenaRadiusProportionToPeri = arenaRadiusProportionToPeri
         self.arenaRadius = self.zones["arena"][2]
+        self.leverZoneMaxDistance = leverZoneMaxDistance
       
         if self.startIndex >= self.endIndex:
             raise ValueError("self.startIndex >= self.endIndex")
@@ -161,7 +163,7 @@ class JourneyElectro:
 
             # get a boolean indicating whether at lever or not in the self.mousePose
             posi = np.stack([self.mousePose.x,self.mousePose.y],axis=1)
-            atLever = self.lever.isAt(posi)
+            atLever = self.lever.isAt(posi,method="maxDistance")
             self.mousePose["atLever"] = atLever
 
             
@@ -183,6 +185,12 @@ class JourneyElectro:
             leavingLeverTime = afterPress.time.loc[afterPress.atLever==False].min()
             # from leaving the lever after the press to end
             self.navPaths["homingFromLeavingLever"] = self.createNavPath(leavingLeverTime,self.endTime,target=self.lever.pose,name=self.name+"_"+"homingFromLeavingLever")
+            
+            
+            # at lever around the lever press time
+            self.navPaths["atLever"] = self.createNavPath(arrivingAtLeverTime,leavingLeverTime, target = self.lever.pose,name = self.name+"_"+"atLever")
+            
+            
 
             # check if any of the NavPath is None, if so remove all NavPaths but the all  
             if None in self.navPaths.values():

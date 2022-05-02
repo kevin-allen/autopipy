@@ -64,7 +64,7 @@ class TrialElectro:
         
         self.test = None
     
-    def extractTrialFeatures(self,arenaCoordinatesFile,bridgeCoordinatesFile,log,mousePose,leverPose,verbose=False):
+    def extractTrialFeatures(self,arenaCoordinatesFile,bridgeCoordinatesFile,log,mousePose,leverPose,leverZoneMaxDistance,verbose=False):
         """
         Function to perform most of the analysis on a trial
         
@@ -74,16 +74,19 @@ class TrialElectro:
         log: autopi log recorded during the task and loaded as a pandas dataframe
         mousePose: DataFrame with time, resTime, x, y , hd. It has the data from the entire session
         leverPose: DataFrame loaded from leverPose file. It has the data from the entire session
+        leverZoneLimit: Maximal distance in cm to be considered at the lever
         """
         
+        self.leverZoneMaxDistance = leverZoneMaxDistance
         self.setArenaRadius(40)
         self.setZoneAreas(arenaCoordinatesFile,
                            bridgeCoordinatesFile)
         self.adjustTrialStart(mousePose)
         self.getLightCondition(log)
         self.setMousePosition(mousePose) # to rerun
-        self.setLeverPosition(leverPose) # to rerun
+        self.setLeverPosition(leverPose,leverZoneMaxDistance=self.leverZoneMaxDistance) # to rerun
         self.getLeverPresses(log) # to rerun
+        
         self.setPositionZones() # to rerun
         self.checkTrialValidity()
         self.identifyJourneyBorders()
@@ -97,7 +100,9 @@ class TrialElectro:
                    self.zones, self.arenaRadiusProportionToPeri,
                    self.leverPress,
                    self.mousePose,
-                   self.positionZones,verbose=verbose))
+                   self.positionZones,
+                   self.leverZoneMaxDistance,
+                                                   verbose=verbose))
         
         if verbose:
             print("trialElectro.extractTrialFeature() Trial name:", self.name, "valid:", self.valid)
@@ -105,7 +110,34 @@ class TrialElectro:
         self.getHomingAngleAtPeriphery()
         
         
-     
+    def getLeverDistance(self, arenaCoordinatesFile,bridgeCoordinatesFile,log,mousePose,leverPose):
+        """
+        We want to use the distribution of distance from the lever to define being at the lever from data
+        
+        This can be called from the session on all trials to get a distribution of all trials
+        
+        Return an 1D numpy array containing the distance of the mouse from the lever
+        """
+        
+        self.setArenaRadius(40)
+        self.setZoneAreas(arenaCoordinatesFile,
+                           bridgeCoordinatesFile)
+        self.adjustTrialStart(mousePose)
+        self.getLightCondition(log)
+        self.setMousePosition(mousePose) # to rerun
+        self.setLeverPosition(leverPose) # to rerun
+        
+        if self.valid == False:
+            return np.nan
+        
+        
+        # get a 2D array with x and y position of the mouse, one point per row
+        Ps = np.stack([self.mousePose.x.to_numpy(),self.mousePose.y.to_numpy()]).T
+        # get the lever distance for all x and y position of the mouse
+        ds = np.apply_along_axis(self.lever.leverDistance, 1, Ps)
+        
+        return ds
+        
         
    
     def getTrialVariables(self):
@@ -324,7 +356,7 @@ class TrialElectro:
         # gap between bridge and arena (y between max of bridge and -40)
         gap = np.logical_and(mouseRelBridge[:,1]>self.zones["bridge"][3],self.mousePose.y < -40)
         
-        self.positionZones=pd.DataFrame({"lever": self.lever.isAt(mousePoints), # use the lever object
+        self.positionZones=pd.DataFrame({"lever": self.lever.isAt(mousePoints,method = "maxDistance"), # use the lever object
                                          "arenaCenter": self.distanceFromArenaCenter< self.zones["arenaCenter"][2],
                                          "arena": self.distanceFromArenaCenter< self.zones["arena"][2],
                                          "bridge": onBridge,
@@ -406,16 +438,18 @@ class TrialElectro:
             self.valid = False
         
         
-    def setLeverPosition(self,leverPose):
+    def setLeverPosition(self,leverPose,leverZoneMaxDistance=None):
         """
-        Extract the lever position data for this trial.
+        Extract the lever position data for this trial. There is one position per trial
         
         The time is ROS time
         
         Argument:
         leverPose: Pandas DataFrames with pose for the lever for the entire session. With these columns:
-                    ['time', 'leverPressX', 'leverPressY', 'leverBoxPLX','leverBoxPLY', 'leverBoxPRX', 'leverBoxPRY']
-        Save it in self.leverPose
+                    ['time', 'leverPressX', 'leverPressY', 'leverBoxPLX','leverBoxPLY', 'leverBoxPRX', 'leverBoxPRY'], Will be saved as self.leverPose
+        
+        leverZoneMaxDistance: the maximal distance to be considered at the lever
+         
         """
         self.leverPose = leverPose[leverPose["time"].between(self.startTime,self.endTime)]
         if len(self.leverPose.time)==0:
@@ -423,6 +457,7 @@ class TrialElectro:
             print("{}, self.valid set to False".format(self.name))
             self.valid = False
             self.lever = Lever()
+            self.lever.leverZoneMaxDistance = leverZoneMaxDistance
             return
         
         self.lever = Lever()
@@ -433,6 +468,11 @@ class TrialElectro:
         pr = np.array((np.nanmedian(self.leverPose["leverBoxPRX"].to_numpy()), 
                        np.nanmedian(self.leverPose["leverBoxPRY"].to_numpy())) )
         self.lever.calculatePose(lp = lp, pl = pl, pr = pr)
+        
+        if leverZoneMaxDistance is not None:
+            self.lever.leverZoneMaxDistance = leverZoneMaxDistance
+        
+        
         
     def setArenaRadius(self,arenaRadius,arenaRadiusProportionToPeri=0.925):
         self.arenaRadius=arenaRadius

@@ -151,6 +151,11 @@ class Session:
         self.log["sessionDateTime"] = self.sessionDateTime
         
     def loadPositionTrackingData(self):
+        """
+        Load position of the mouse, lever, arena and bridge. 
+        
+        The mouse position here is not from the tracking system.
+        """
         self.mouseLeverPosi = pd.read_csv(self.fileNames["mouseLeverPosition.csv"])
         self.videoLog = pd.read_csv(self.fileNames["arena_top.log"], delimiter=" ")
         self.arenaCoordinates = np.loadtxt(self.fileNames["arenaCoordinates"])
@@ -347,9 +352,63 @@ class Session:
         
         return [t for t in self.trialList if t.trialNo==trialNo][0]
     
+    
+    def getLeverZoneMaxDistance(self,z=3,step=0.5,plot=False, maxDistanceLimit=10):
+        """
+        Get the lever zone limit
+        
+        This is calculated using a occupancy histogram of the distance from lever.
+        We use the lever position of each trial to calculate this.
+        
+        We find the maximal value in the occupancy map, which should be when the animal is around the lever.
+        We move away from lever until the occupancy goes below a threshold that is z standard deviations 
+        above the mean of the baseline 
+        The baseline is anything more than 10 cm from lever
+        """
+        
+        # gets the distance of mouse from lever
+        m =np.hstack([trial.getLeverDistance(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],
+                                       bridgeCoordinatesFile = self.fileNames["bridgeCoordinates"],
+                                       log = self.log,
+                                       mousePose = self.mousePose,
+                                       leverPose = self.leverPose) for trial in self.trialList])
+    
+        
+        # create the histogram
+        h = np.histogram(m,bins=np.arange(start=0,stop=20+step,step=step))
+        binCenters = h[1][:-1] +step/2
+
+        # get the peak, mean and std of baseline (> 10 cm from lever)
+        maxH = np.max(h[0])
+        meanBase = np.mean(h[0][binCenters>10])
+        stdBase = np.std(h[0][binCenters>10])
+
+        # the first z std above baseline is threshold
+        peakLoc = np.argmax(h[0])
+        thresholdPassedLoc = np.argmax(h[0][peakLoc:] < meanBase+z*stdBase)+peakLoc
+
+        zoneLimit = binCenters[thresholdPassedLoc]
+        
+        if zoneLimit > maxDistanceLimit:
+            zoneLimit = maxDistanceLimit
+
+        #print(maxH,peakLoc,thresholdPassedLoc,meanBase,stdBase,zoneLimit)
+
+        if plot :
+            plt.plot(binCenters,h[0])
+            plt.scatter(binCenters[peakLoc],h[0][peakLoc],color="red")
+            plt.scatter(binCenters[thresholdPassedLoc],h[0][thresholdPassedLoc],color="red")
+            plt.plot([0,20],[h[0][thresholdPassedLoc],h[0][thresholdPassedLoc]])
+
+        return zoneLimit 
+
+    
     def extractTrialElectroFeatures(self,mousePose,verbose=False):
         """
         Extract trial features for session with electrophysiology
+        
+        We use the animal position from the spikeA.AnimalPose.Pose here and not tracking from the arena top video
+        
         
         Arguments: 
         mousePose: numpy array, the spikeA.AnimalPose.Pose
@@ -366,12 +425,19 @@ class Session:
                                        "hd":mousePose[:,4]})
         self.leverPose = pd.read_csv(self.path+"/leverPose",index_col = False) 
         
+        
+        ## get the limit of the lever zone using the data from all trials
+        self.leverZoneMaxDistance = self.getLeverZoneMaxDistance()
+        print("leverZoneMaxDistance:", self.leverZoneMaxDistance)
+        
         for trial in self.trialList:
             trial.extractTrialFeatures(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],
                                        bridgeCoordinatesFile = self.fileNames["bridgeCoordinates"],
                                        log = self.log,
                                        mousePose = self.mousePose,
-                                       leverPose = self.leverPose,verbose=verbose)
+                                       leverPose = self.leverPose,
+                                       leverZoneMaxDistance = self.leverZoneMaxDistance,
+                                       verbose=verbose)
     
         self.nJourneys = np.sum([ t.nJourneys for t in self.trialList])
         self.nTrials = len(self.trialList)
@@ -615,7 +681,7 @@ class Session:
 
         for t in trialList:
    
-            if t.valid and t.light == light and t.journeyList is not None and len(t.journeyList) > 0:
+            if t.valid and t.light == light and t.journeyList is not None and len(t.journeyList) > 0 and t.coordinateAtPeriphery is not None:
                 j = t.journeyList[-1] # last journey is the one with lever press
                 
                 if plotAllNavPath==True:
