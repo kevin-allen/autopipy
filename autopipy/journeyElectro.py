@@ -193,9 +193,9 @@ class JourneyElectro:
             
 
             # check if any of the NavPath is None, if so remove all NavPaths but the all  
-            if None in self.navPaths.values():
+            if any([nv is None for nv in self.navPaths.values()]):
                 print("We have a None navPath in our dictionary, only keeping the all path")
-                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever"]:
+                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever","atLever"]:
                     del self.navPaths[n]
             
             
@@ -203,7 +203,7 @@ class JourneyElectro:
             # check if any of the NavPath is None, if so remove all NavPaths but the all  
             if any([nv.pPose is None for nv in self.navPaths.values()]):
                 print("We have a navPath with empty pPose in our dictionary, only keeping the all path")
-                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever"]:
+                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever","atLever"]:
                     del self.navPaths[n]
             
                    

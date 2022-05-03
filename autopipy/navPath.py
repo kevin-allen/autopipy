@@ -82,6 +82,14 @@ class NavPath:
             self.medianMVDeviationToTarget=np.NAN
             self.medianHDDeviationToTarget=np.NAN
             
+            # variables quantifying turns around the target
+            self.entryAngleAroundTarget = np.NAN # angle of first data point relative to target
+            self.exitAngleAroundTarget = np.NAN # angle of the last point relative to target
+            self.cumSumDiffAngleAroundTarget = None # vector with the cum sum of difference in angle around the target
+            self.endCumSumDiffAngleAroundTarget = np.NAN  # last data point in the cum sum of difference in angle around the target
+            self.rangeCumSumDiffAngleAroundTarget = np.NAN
+            
+            
             return
         
 
@@ -193,12 +201,60 @@ class NavPath:
             # replace the head direction data with the angle between the vector of the animal position (origin 0,0) and the vector 1,0
             self.targetToAnimalAngle = np.arctan2(self.vTargetToAnimal[:,1], self.vTargetToAnimal[:,0]) # relative to 1,0 vector
             
+            ########################
+            ## angle around target #
+            ########################
+            
+            targetPoint = np.array([self.targetPose[0,0],self.targetPose[0,1]])
+            animalPoints = np.vstack([self.pPose[:,0],self.pPose[:,1]]).T
+            animalPoints = animalPoints - targetPoint # put the target at zero, as the origin of our vectors
+            #animalPoints = animalPoints[~np.isnan(animalPoints).any(axis=1),:] # remove NAN, can't do this because of instantaneous data
+            animalAngleAroundTarget = np.arctan2(animalPoints[:,1],animalPoints[:,0])
+            
+            if np.sum(~np.isnan(animalAngleAroundTarget)) > 2:
+                self.entryAngleAroundTarget = animalAngleAroundTarget[~np.isnan(animalAngleAroundTarget)][0]
+                self.exitAngleAroundTarget = animalAngleAroundTarget[~np.isnan(animalAngleAroundTarget)][-1]
+            else:
+                self.entryAngleAroundTarget = np.nan
+                self.exitAngleAroundTarget = np.nan
+            
+            # get the rotation matrix of each vector
+            M=np.apply_along_axis(self.rotMatrix,1,animalPoints)
+            # apply the rotation matrix of previous vector to current vector
+            rotAnimalPoints = np.empty(shape = (animalPoints.shape[0]-1,2))
+            for i in range(1,animalPoints.shape[0]):
+                rotAnimalPoints[i-1,:] = animalPoints[i,:]@M[i-1,:]
+            diffAnimalAngleAroundTarget = np.arctan2(rotAnimalPoints[:,1],rotAnimalPoints[:,0])
+            # vector with the cumsum of angles around lever
+            self.cumSumDiffAngleAroundTarget = np.cumsum(diffAnimalAngleAroundTarget)
+            
+            # last data point in the cum sum of difference in angle around the target, and range (peak-to-peak)
+            if np.sum(~np.isnan(self.cumSumDiffAngleAroundTarget)) > 2:
+                self.endCumSumDiffAngleAroundTarget =  self.cumSumDiffAngleAroundTarget[~np.isnan(self.cumSumDiffAngleAroundTarget)][-1] 
+                self.rangeCumSumDiffAngleAroundTarget = np.ptp(self.cumSumDiffAngleAroundTarget[~np.isnan(self.cumSumDiffAngleAroundTarget)])
+            else:
+                self.endCumSumDiffAngleAroundTarget = np.nan
+                self.rangeCumSumDiffAngleAroundTarget = np.nan
+        
+            # add one np.nan to make it the correct size, now was -1 normal size
+            self.cumSumDiffAngleAroundTarget = np.hstack([np.array([np.nan]),self.cumSumDiffAngleAroundTarget])
             
         else:
             self.targetDistance = np.zeros_like(self.pPose[:,0])
             self.targetDistance[:]=np.nan
             self.vTargetToAnimal = np.zeros_like(self.pPose[:,0:2])
             self.vTargetToAnimal[:] = np.nan
+            
+            # default values
+            self.entryAngleAroundTarget = np.nan # angle of first data point relative to target
+            self.exitAngleAroundTarget = np.nan # angle of the last point relative to target
+            self.cumSumDiffAngleAroundTarget = np.zeros_like(self.pPose[:,0]) # vector with the cum sum of difference in angle around the target
+            self.cumSumDiffAngleAroundTarget[:] = np.nan
+            self.endCumSumDiffAngleAroundTarget = np.nan  # last data point in the cum sum of difference in angle around the target
+            self.rangeCumSumDiffAngleAroundTarget = np.nan
+            
+            
+            
             
     def instantaneousBehavioralVariables(self):
         """
@@ -225,7 +281,8 @@ class NavPath:
                                      "targetDistance":self.targetDistance,
                                      "targetToAnimalX":self.vTargetToAnimal[:,0],
                                      "targetToAnimalY":self.vTargetToAnimal[:,1],
-                                     "targetToAnimalAngle":self.targetToAnimalAngle})
+                                     "targetToAnimalAngle":self.targetToAnimalAngle,
+                                     "cumSumDiffAngleAroundTarget":self.cumSumDiffAngleAroundTarget})
             else:
                 return pd.DataFrame({"name" : self.name,
                                      "trialNo": self.trialNo,
@@ -241,7 +298,8 @@ class NavPath:
                                      "targetDistance":self.targetDistance,
                                      "targetToAnimalX":self.vTargetToAnimal[:,0],
                                      "targetToAnimalY":self.vTargetToAnimal[:,1],
-                                     "targetToAnimalAngle":self.targetToAnimalAngle})
+                                     "targetToAnimalAngle":self.targetToAnimalAngle,
+                                     "cumSumDiffAngleAroundTarget":self.cumSumDiffAngleAroundTarget})
     
     def getVariables(self):
         self.myDict = {
@@ -257,7 +315,14 @@ class NavPath:
             "oriAngularDistance" : [self.oriAngularDistance[0]],
             "oriAngularSpeed" : [self.oriAngularSpeed[0]],
             "medianMVDeviationToTarget" : [self.medianMVDeviationToTarget],
-            "medianHDDeviationToTarget" : [self.medianHDDeviationToTarget]}
+            "medianHDDeviationToTarget" : [self.medianHDDeviationToTarget],
+            "entryAngleAroundTarget" : [self.entryAngleAroundTarget],
+            "exitAngleAroundTarget" : [self.exitAngleAroundTarget],
+            "endCumSumDiffAngleAroundTarget" : [self.endCumSumDiffAngleAroundTarget],
+            "rangeCumSumDiffAngleAroundTarget" : [self.rangeCumSumDiffAngleAroundTarget]
+                        
+            
+        }
         return pd.DataFrame(self.myDict)
                 
     
@@ -266,7 +331,15 @@ class NavPath:
             theta = theta*np.pi/180
         return np.stack((np.cos(theta),np.sin(theta)),axis =1)
 
-      
+    def rotMatrix(self,point):
+        """
+        Return a 2D rotation matrix
+
+        Argument 1D np array with x and y coordinate
+        """
+        a = np.arctan2(point[1],point[0])
+        return np.array([[np.cos(a),-np.sin(a)],[np.sin(a),np.cos(a)]])
+ 
             
     def vectorAngle(self,v,rv=np.array([[1,0]]),degrees=False,quadrant=False) :
         """
