@@ -10,6 +10,7 @@ import matplotlib.patches as patches
 from autopipy.trial import Trial
 from autopipy.trialElectro import TrialElectro
 from tqdm import tqdm
+import os.path
 
 class Session:
     """
@@ -353,7 +354,7 @@ class Session:
         return [t for t in self.trialList if t.trialNo==trialNo][0]
     
     
-    def getLeverZoneMaxDistance(self,z=3,step=0.5,plot=False, maxDistanceLimit=10):
+    def getLeverZoneMaxDistance(self,z=3,step=0.5,plot=False, maxDistanceLimit=10, overwrite=False):
         """
         Get the lever zone limit
         
@@ -364,9 +365,20 @@ class Session:
         We move away from lever until the occupancy goes below a threshold that is z standard deviations 
         above the mean of the baseline 
         The baseline is anything more than 10 cm from lever
+        
+        Save value in a file so we don't have to recalculate every time.
+        
         """
         
-        # gets the distance of mouse from lever
+        fn = self.path+"/leverZoneMaxDistance"
+        if os.path.exists(fn) and overwrite==False:
+            print("reading",fn)
+            file = open(fn,"r")
+            a = float(file.readline())
+            file.close()
+            return a
+        
+        # gets the distance of mouse from lever, we loop per trial because the lever has a fixed position within a trial
         m =np.hstack([trial.getLeverDistance(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],
                                        bridgeCoordinatesFile = self.fileNames["bridgeCoordinates"],
                                        log = self.log,
@@ -400,6 +412,12 @@ class Session:
             plt.scatter(binCenters[thresholdPassedLoc],h[0][thresholdPassedLoc],color="red")
             plt.plot([0,20],[h[0][thresholdPassedLoc],h[0][thresholdPassedLoc]])
 
+            
+        print("saving",fn)
+        output_file = open(fn,'w')
+        output_file.write("{}\n".format(zoneLimit))
+        output_file.close()   
+        
         return zoneLimit 
 
     
@@ -427,6 +445,9 @@ class Session:
         
         
         ## get the limit of the lever zone using the data from all trials
+        
+        
+        
         self.leverZoneMaxDistance = self.getLeverZoneMaxDistance()
         print("leverZoneMaxDistance:", self.leverZoneMaxDistance)
         
@@ -438,6 +459,7 @@ class Session:
                                        leverPose = self.leverPose,
                                        leverZoneMaxDistance = self.leverZoneMaxDistance,
                                        verbose=verbose)
+        
     
         self.nJourneys = np.sum([ t.nJourneys for t in self.trialList])
         self.nTrials = len(self.trialList)

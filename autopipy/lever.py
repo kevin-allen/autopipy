@@ -43,6 +43,7 @@ class Lever:
         self.scalingFactorSideWalls = 0.8 # length of the side walls relative to the long axis (posterior middle point to lever press)
         self.isAtLever = False
         self.leverZoneMaxDistance = np.nan # maximal distance to be considered at the lever
+        self.pose = np.array([[np.nan]*6])
         
     def isAt(self,points, method = "zones"):
         """

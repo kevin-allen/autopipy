@@ -165,7 +165,9 @@ class TrialElectro:
                        "nJourneys" : [self.nJourneys],
                        "homingAngleAtPeriphery" : [self.homingAngleAtPeriphery],
                        "homingErrorAtPeriphery" : [self.homingErrorAtPeriphery],
-                       "homingErrorAtPeripheryLever" : [self.homingErrorAtPeripheryLever]}
+                       "homingErrorAtPeripheryLever" : [self.homingErrorAtPeripheryLever],
+                       "leverX": [self.lever.pose[0,0]],
+                       "leverY": [self.lever.pose[0,1]]}
         
         
         df = pd.DataFrame(self.myDict)
@@ -331,6 +333,13 @@ class TrialElectro:
             timeChange = newStartTime-self.startTime
             if np.abs(timeChange) > 0.5:
                 print("{}, start time adjustment: {:.4f} sec".format(self.name,timeChange))
+            
+            if np.abs(timeChange) > 5:
+                print("{}, start time adjustment would be too large, something is wrong.")
+                print("keep original start time")
+                return
+                
+                
             self.startTime = newStartTime
     
     
@@ -357,8 +366,9 @@ class TrialElectro:
         gap = np.logical_and(mouseRelBridge[:,1]>self.zones["bridge"][3],self.mousePose.y < -40)
         
         self.positionZones=pd.DataFrame({"lever": self.lever.isAt(mousePoints,method = "maxDistance"), # use the lever object
-                                         "arenaCenter": self.distanceFromArenaCenter< self.zones["arenaCenter"][2],
+                                         "arenaCenter": self.distanceFromArenaCenter < self.zones["arenaCenter"][2],
                                          "arena": self.distanceFromArenaCenter< self.zones["arena"][2],
+                                         "periphery": (self.distanceFromArenaCenter< self.zones["arena"][2])&(self.distanceFromArenaCenter > self.zones["arenaCenter"][2]),
                                          "bridge": onBridge,
                                          "homeBase": onHb,
                                             "gap": gap})

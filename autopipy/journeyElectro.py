@@ -165,6 +165,7 @@ class JourneyElectro:
             posi = np.stack([self.mousePose.x,self.mousePose.y],axis=1)
             atLever = self.lever.isAt(posi,method="maxDistance")
             self.mousePose["atLever"] = atLever
+            self.mousePose["atPeriphery"] = self.positionZones["periphery"]
 
             
              # search before lever press
@@ -183,8 +184,18 @@ class JourneyElectro:
             # leaving lever after lever press
             afterPress = self.mousePose.loc[self.mousePose.time > lpt]
             leavingLeverTime = afterPress.time.loc[afterPress.atLever==False].min()
+            reachingPeripheryTime = afterPress.time.loc[(afterPress.atPeriphery==True)&(afterPress.time > leavingLeverTime)].min()
+
+            if reachingPeripheryTime is None:
+                reachingPeripheryTime = afterPress.time.max()
+            
+            #print("leaving to peri:", leavingLeverTime, reachingPeripheryTime, reachingPeripheryTime-leavingLeverTime)
+            
             # from leaving the lever after the press to end
             self.navPaths["homingFromLeavingLever"] = self.createNavPath(leavingLeverTime,self.endTime,target=self.lever.pose,name=self.name+"_"+"homingFromLeavingLever")
+            
+            
+            self.navPaths["homingFromLeavingLeverToPeriphery"] = self.createNavPath(leavingLeverTime,reachingPeripheryTime,target=self.lever.pose,name=self.name+"_"+"homingFromLeavingLeverToPeriphery")
             
             
             # at lever around the lever press time
@@ -195,7 +206,7 @@ class JourneyElectro:
             # check if any of the NavPath is None, if so remove all NavPaths but the all  
             if any([nv is None for nv in self.navPaths.values()]):
                 print("We have a None navPath in our dictionary, only keeping the all path")
-                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever","atLever"]:
+                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever","atLever","homingFromLeavingLeverToPeriphery"]:
                     del self.navPaths[n]
             
             
@@ -203,8 +214,21 @@ class JourneyElectro:
             # check if any of the NavPath is None, if so remove all NavPaths but the all  
             if any([nv.pPose is None for nv in self.navPaths.values()]):
                 print("We have a navPath with empty pPose in our dictionary, only keeping the all path")
-                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever","atLever"]:
+                for n in ["searchPath","searchToLeverPath","homingPath", "homingFromLeavingLever","atLever","homingFromLeavingLeverToPeriphery"]:
                     del self.navPaths[n]
+            
+            ###################################################################################################################################################
+            # Distance to target in the navPath was calculated from the center of the lever box, but we want the distance from the sides of the lever box.  ###
+            # We can fix this here                                                                                                                          ###
+            ###################################################################################################################################################
+            for nv in self.navPaths.values():
+                Ps = np.stack([nv.pPose[:,0], nv.pPose[:,1]]).T
+                ds = np.apply_along_axis(self.lever.leverDistance, 1, Ps)
+                nv.targetDistance = ds
+
+
+            
+            
             
                    
             
