@@ -107,10 +107,12 @@ class TrialElectro:
         if verbose:
             print("trialElectro.extractTrialFeature() Trial name:", self.name, "valid:", self.valid)
         
+        # get performance variables for this trial
         self.getHomingAngleAtPeriphery()
+        self.getSearchVariables()
         
         
-    def getLeverDistance(self, arenaCoordinatesFile,bridgeCoordinatesFile,log,mousePose,leverPose):
+    def getLeverDistance(self, arenaCoordinatesFile,bridgeCoordinatesFile,log,mousePose,leverPose,includeResTime=True):
         """
         We want to use the distribution of distance from the lever to define being at the lever from data
         
@@ -135,6 +137,9 @@ class TrialElectro:
         Ps = np.stack([self.mousePose.x.to_numpy(),self.mousePose.y.to_numpy()]).T
         # get the lever distance for all x and y position of the mouse
         ds = np.apply_along_axis(self.lever.leverDistance, 1, Ps)
+        
+        if includeResTime:
+            ds = np.stack([self.mousePose.resTime.to_numpy(),ds])
         
         return ds
         
@@ -163,6 +168,11 @@ class TrialElectro:
                        "arenaRadiusCm": [self.arenaRadius],
                        "nLeverPresses" : [self.nLeverPresses],
                        "nJourneys" : [self.nJourneys],
+                        "searchLength": [self.searchLength],
+                        "searchDuration": [self.searchDuration],
+                        "searchMeanSpeed": [self.searchMeanSpeed],
+                        "searchMedianMVDeviationToTarget": [self.searchMedianMVDeviationToTarget],
+                        "searchLastTargetToAnimalAngle": [self.searchLastTargetToAnimalAngle],
                        "homingAngleAtPeriphery" : [self.homingAngleAtPeriphery],
                        "homingErrorAtPeriphery" : [self.homingErrorAtPeriphery],
                        "homingErrorAtPeripheryLever" : [self.homingErrorAtPeripheryLever],
@@ -176,7 +186,51 @@ class TrialElectro:
         return df
 
 
+    def getSearchVariables(self):
+        """
+        Store a few variables describing the search path in the trialElectro object.
+        
+        We get:
+        self.searchLength: Length of the search path to the lever zone
+        self.searchDuration: Duration of the search path to the lever zone
+        self.searchMeanSpeed: Mean speed of the search path
+        self.searchMedianMVDeviationToTarget: Median MV Direction to target (tells you if the mouse went straight to the lever)
+        self.searchLastTargetToAnimalAngle: The angle of the vector from the lever to the mouse when the search path ended (tells from where the animal reached the lever)
+        """
+        if self.valid == False:
+            self.searchLength = np.nan
+            self.searchDuration = np.nan
+            self.searchMeanSpeed = np.nan
+            self.searchMedianMVDeviationToTarget = np.nan
+            self.searchLastTargetToAnimalAngle = np.nan
+            return 
+        
+        if len(self.journeyList) == 0:
+            self.searchLength = np.nan
+            self.searchDuration = np.nan
+            self.searchMeanSpeed = np.nan
+            self.searchMedianMVDeviationToTarget = np.nan
+            self.searchLastTargetToAnimalAngle = np.nan
+            return 
+            
+        # the last journey should be the one with lever press
+        j = self.journeyList[-1]
 
+        if "searchToLeverPath" not in j.navPaths.keys():
+            print("Could not find a searchToLeverPath in j.navPaths.keys()")
+            self.searchLength = np.nan
+            self.searchDuration = np.nan
+            self.searchMeanSpeed = np.nan
+            self.searchMedianMVDeviationToTarget = np.nan
+            self.searchLastTargetToAnimalAngle = np.nan
+            return
+        
+        self.searchLength = j.navPaths["searchToLeverPath"].length
+        self.searchDuration = j.navPaths["searchToLeverPath"].duration
+        self.searchMeanSpeed = j.navPaths["searchToLeverPath"].meanSpeed 
+        self.searchMedianMVDeviationToTarget  = j.navPaths["searchToLeverPath"].medianMVDeviationToTarget
+        self.searchLastTargetToAnimalAngle = j.navPaths["searchToLeverPath"].targetToAnimalAngle[~np.isnan(j.navPaths["searchToLeverPath"].targetToAnimalAngle)][-1]
+        
 
     def getHomingAngleAtPeriphery(self):
         """

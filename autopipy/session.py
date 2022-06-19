@@ -353,6 +353,27 @@ class Session:
         
         return [t for t in self.trialList if t.trialNo==trialNo][0]
     
+    def getDistanceFromLever(self):
+        """
+        Function to calculate the distance from the lever for the entire session
+        """
+        # gets the distance of mouse from lever, we loop per trial because the lever has a fixed position within a trial
+        res = [trial.getLeverDistance(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],
+                                       bridgeCoordinatesFile = self.fileNames["bridgeCoordinates"],
+                                       log = self.log,
+                                       mousePose = self.mousePose,
+                                       leverPose = self.leverPose,
+                                       includeResTime=True) for trial in self.trialList]
+        
+        newList = []
+        # if trial is invalid, there is a np.nan instead of an array in our list
+        for r in res:
+            if isinstance(r, np.ndarray):
+                newList.append(r)
+        
+        m =np.hstack(newList).T
+        return m
+    
     
     def getLeverZoneMaxDistance(self,z=3,step=0.5,plot=False, maxDistanceLimit=10, overwrite=False):
         """
@@ -379,12 +400,16 @@ class Session:
             return a
         
         # gets the distance of mouse from lever, we loop per trial because the lever has a fixed position within a trial
-        m =np.hstack([trial.getLeverDistance(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],
+        res = [trial.getLeverDistance(arenaCoordinatesFile=self.fileNames["arenaCoordinates"],
                                        bridgeCoordinatesFile = self.fileNames["bridgeCoordinates"],
                                        log = self.log,
                                        mousePose = self.mousePose,
-                                       leverPose = self.leverPose) for trial in self.trialList])
-    
+                                       leverPose = self.leverPose) for trial in self.trialList]
+        
+       
+        
+        m =np.hstack(res)
+        
         
         # create the histogram
         h = np.histogram(m,bins=np.arange(start=0,stop=20+step,step=step))
