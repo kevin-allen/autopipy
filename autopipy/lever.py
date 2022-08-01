@@ -215,7 +215,7 @@ class Lever:
             theta = angle/180*np.pi
         A = np.array( [[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]]) # matrix to rotate vector
         return np.dot(A,v)
-    def plotLever(self,ax=None):
+    def plotLever(self,ax=None, zones=True):
         """
         Function to plot the lever on an matplotlib axis
         """
@@ -224,8 +224,9 @@ class Lever:
         
         if hasattr(self, 'pointsPlot'):
             ax.plot(self.pointsPlot[:,0],self.pointsPlot[:,1], color = "gray")
-            ax.plot(self.enterZonePointsPlot[:,0],self.enterZonePointsPlot[:,1], color = "gray",linestyle="dotted")
-            ax.plot(self.exitZonePointsPlot[:,0],self.exitZonePointsPlot[:,1], color = "gray",linestyle="dotted")
+            if zones:
+                ax.plot(self.enterZonePointsPlot[:,0],self.enterZonePointsPlot[:,1], color = "gray",linestyle="dotted")
+                ax.plot(self.exitZonePointsPlot[:,0],self.exitZonePointsPlot[:,1], color = "gray",linestyle="dotted")
 
     
             

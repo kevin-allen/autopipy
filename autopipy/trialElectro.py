@@ -658,7 +658,7 @@ class TrialElectro:
     def __str__(self):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
    
-    def plotTrialSetup(self,ax=None,title = "", bridge=True,homeBase=True,lever=True):
+    def plotTrialSetup(self,ax=None,title = "", arena=True, bridge=True,homeBase=True,lever=True,leverZones=True):
         """
         Function to draw arena, bridge and home base on an axis
         """
@@ -666,16 +666,17 @@ class TrialElectro:
             ax = plt.gca()
 
         # to plot the arena circle
-        arena=np.arange(start=0,stop=2*np.pi,step=0.02)
+        arenaPose=np.arange(start=0,stop=2*np.pi,step=0.02)
 
         # plot the arena and arena periphery
         ax.set_aspect('equal', adjustable='box')
         ax.set_title(title)
-        ax.plot(np.cos(arena)*self.arenaRadius,np.sin(arena)*self.arenaRadius,color="gray")
-        ax.plot(np.cos(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,
-                     np.sin(arena)*self.arenaRadius*self.arenaRadiusProportionToPeri,color="gray",linestyle='dashed')
-        ax.set_xlabel("cm")
-        ax.set_ylabel("cm")
+        if arena:
+            ax.plot(np.cos(arenaPose)*self.arenaRadius,np.sin(arenaPose)*self.arenaRadius,color="gray")
+            ax.plot(np.cos(arenaPose)*self.arenaRadius*self.arenaRadiusProportionToPeri,
+                         np.sin(arenaPose)*self.arenaRadius*self.arenaRadiusProportionToPeri,color="gray",linestyle='dashed')
+            ax.set_xlabel("cm")
+            ax.set_ylabel("cm")
         zones=[]
         if bridge:
             zones.append("bridge")
@@ -690,7 +691,7 @@ class TrialElectro:
                 # Add the patch to the axes
                 ax.add_patch(rect)
         if lever:
-            self.lever.plotLever(ax=ax)
+            self.lever.plotLever(ax=ax,zones=leverZones)
         return(ax)
 
     def removeAxisInfo(self,ax):
