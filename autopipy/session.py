@@ -716,7 +716,7 @@ class Session:
                     plt.close()
     def plotNavPath(self,ax,navPathType="all",light="light", trialList=None,plotAllNavPath=False,plotPeriphery=False,
                     plotHomeBase=True,plotBridge=True,plotSetup=True,startCentered=False, leverCentered=False,
-                   rotateLeverToBridgeIsSouth=False):
+                   rotateLeverToBridgeIsSouth=False,color=None, peripheryColor="blue"):
         """
         Plot all the navPath object of one type for the session
         
@@ -795,12 +795,16 @@ class Session:
                             y = pRot[:,1]
                         
                             
-                        ax.plot(x,y,zorder=1,color="black")
+                        if color is None:
+                            ax.plot(x,y,zorder=1) #,color="black")
+                        else:
+                            ax.plot(x,y,zorder=1,color=color)
                         
                         
                              
                 if plotPeriphery==True:
-                    ax.scatter(t.coordinateAtPeriphery[0],t.coordinateAtPeriphery[1],color="red",zorder=2)
+                    ax.scatter(t.coordinateAtPeriphery[0],t.coordinateAtPeriphery[1],color=peripheryColor,zorder=2)
+                    
         
         ax.axis("off")
         
