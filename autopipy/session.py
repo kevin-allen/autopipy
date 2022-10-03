@@ -171,7 +171,7 @@ class Session:
             newDf = self.fixVideoLog(self.videoLog)
             self.videoLog = newDf
             
-    def testVideoLogSynchronization(self):
+    def testVideoLogSynchronization(self,verbose=False):
         """
         
         Method to assess whether the video and the video log are synchronized and whether there are problems associated with these files
@@ -196,9 +196,24 @@ class Session:
         self.synchroMaxFrameTimeDiff=self.videoLog.time.diff().max()
         self.synchroProblemTimeDiff = np.sum(self.videoLog.time.diff()>0.25)
         self.synchroMeanFrameRate= nFrames/(self.videoLog.time.max()-self.videoLog.time.min())
-        print("{}, video len: {}, video-log len:{}, first frame: {}, max log gap: {}, mean time diff: {:.3}, max time diff: {:.3}, num problem diff: {}, frame rate: {:.3}".format(self.name, nFrames, len(self.videoLog), self.synchroFirstFrame, self.synchroGapLengths.max(), self.synchroMeanFrameTimeDiff, self.synchroMaxFrameTimeDiff,
+        if verbose == True:
+            print("{}, video len: {}, video-log len:{}, first fr.: {}, max log gap: {}, mean time diff: {:.3}, max time diff: {:.3}, num prob. diff: {}, frame rate: {:.3}".format(self.name, nFrames, len(self.videoLog), self.synchroFirstFrame, self.synchroGapLengths.max(), self.synchroMeanFrameTimeDiff, self.synchroMaxFrameTimeDiff,
                                                                                               self.synchroProblemTimeDiff,
                                                                                               self.synchroMeanFrameRate))
+        if nFrames != len(self.videoLog):
+            print("{}, video len: {}, video-log len:{}, first fr.: {}, max log gap: {}, mean time diff: {:.3}, max time diff: {:.3}, num prob. diff: {}, frame rate: {:.3}".format(self.name, nFrames, len(self.videoLog), self.synchroFirstFrame, self.synchroGapLengths.max(), self.synchroMeanFrameTimeDiff, self.synchroMaxFrameTimeDiff,
+                                                                                              self.synchroProblemTimeDiff,
+                                                                                              self.synchroMeanFrameRate))
+            print("Problem with the length of the videoLog or video file.")
+        
+        if self.synchroMeanFrameRate < 29.9:
+            print("{}, video len: {}, video-log len:{}, first fr.: {}, max log gap: {}, mean time diff: {:.3}, max time diff: {:.3}, num prob. diff: {}, frame rate: {:.3}".format(self.name, nFrames, len(self.videoLog), self.synchroFirstFrame, self.synchroGapLengths.max(), self.synchroMeanFrameTimeDiff, self.synchroMaxFrameTimeDiff,
+                                                                                              self.synchroProblemTimeDiff,
+                                                                                              self.synchroMeanFrameRate))
+            print("Sampling rate below 29.9 Hz.")
+        
+        
+            
     def fixVideoLog(self,vl):
         removeCount=0
         addCount=0

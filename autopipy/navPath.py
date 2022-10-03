@@ -131,14 +131,21 @@ class NavPath:
         
         # mean linear speed
         self.meanSpeed = self.length/self.duration
+        
+        # time difference between position samples
         timeDiff=np.diff(self.pPose[:,6],axis = 0,append=np.nan)
+        # check if timeDiff == 0, because we are about to divide mv3 by timeDiff
+        timeDiff[timeDiff==0]=np.nan
+        
         
         # speed profile in the path divided into 10 equal bins 
         self.speed=mv3/timeDiff
+        
         ##WARNING##
         # we need to remove na for the stats.binned_statistic
         # we might want to change this behavior in the future
         # I do not expect to have many nan in the paths, based on labeled videos
+        
         self.speedShort = self.speed[~np.isnan(self.speed)] 
         if len(self.speedShort) > 9 :
             x=np.arange(len(self.speedShort))
@@ -370,7 +377,9 @@ class NavPath:
 
         if quadrant:
             # deal with the 3 and 4 quadrant
-            theta[v[:,-1] < 0] = 2*np.pi - theta[v[:,-1]<0] 
+            # should only apply this to rows with valid data
+            
+            theta[v[~np.isnan(v[:,-1]),-1] < 0] = 2*np.pi - theta[v[~np.isnan(v[:,-1]),-1]<0] 
 
         if degrees :
             theta = theta * 360 / (2*np.pi)

@@ -203,7 +203,37 @@ class LeverDetector(Dlc):
         return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
     
     
-
+class MouseLEDsDetector(Dlc):
+    """
+    Class to implement the detection of the mouse LEDs and its head using a deeplabcut model
+    This class inherits from dlc
+    
+    It assumes that the model detects
+    ledL
+    ledR
+    head
+    
+    """
+    def __init__(self, pathConfigFile):
+        super().__init__(pathConfigFile)
+        
+        self.requiredBodyParts = ['ledL', 'ledR', 'head']
+        if not self.bodyParts == self.requiredBodyParts :
+            print("The body parts required are not in the model")
+            return False
+        
+        
+    def __str__(self):
+        """
+        Print function
+        """
+        return  str(self.__class__) + '\n' + '\n'.join((str(item) + ' = ' + str(self.__dict__[item]) for item in self.__dict__))
+    
+    
+    
+    
+    
+    
 
 class MouseLeverDetector(Dlc):
     """

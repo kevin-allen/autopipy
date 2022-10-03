@@ -206,6 +206,15 @@ def positionTrackingFromArenaTopVideo(ses,modelDir,
     Function to do all the video processing to get the position of the animal on the arena
 
     It will also get you the arena and bridge coordinates
+    
+    Steps:
+    1. detect the arena in arena_top.avi video
+    2. detect the bridge in arena_top.avi video
+    3. apply a mask and crop the video, creating arena_top.cropped.avi
+    4. detect the mouse, and lever in cropped video
+    5. detect the arena in cropped video
+    6. detect the bridge in cropped video
+    
 
     Arguments
         ses: A session object
