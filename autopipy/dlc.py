@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 import pandas as pd
 import os 
+from datetime import datetime
 
 
 class Dlc():
@@ -49,6 +50,12 @@ class Dlc():
             pathVideoFile
             saveCsv Boolean indicating whether to save the data into a csv file
         """
+        
+        startTime = datetime.now()
+        dt_string = startTime.strftime("%d/%m/%Y %H:%M:%S")
+        print("Start date and time =", dt_string)
+        
+        
         if not os.path.isfile(pathVideoFile): 
             print(pathVideoFile + " does not exist")
             return False
@@ -76,6 +83,11 @@ class Dlc():
             fileName = os.path.splitext(self.pathVideoOutputH5)[0]+".csv"
             print("Saving position data to "+fileName)
             df.to_csv(fileName,index=False)
+            
+        endTime = datetime.now()
+        dt_string = endTime.strftime("%d/%m/%Y %H:%M:%S")
+        print("End date and time =", dt_string)
+        
             
             
     def labelVideo(self, pathVideoFile):
