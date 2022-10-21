@@ -118,8 +118,7 @@ class Dlc():
             pathVideoFile
         """
         if not os.path.isfile(pathVideoFile): 
-            print(pathVideoFile + " does not exist")
-            return False
+            raise ValueError(pathVideoFile + " does not exist")
         
         self.pathVideoFile = pathVideoFile
          
@@ -127,10 +126,8 @@ class Dlc():
         self.pathVideoOutputH5=self.getVideoOutputH5(pathVideoFile)
         
         if not os.path.isfile(self.pathVideoOutputH5):
-            print(self.pathVideoOutputH5 + " does not exist")
-            print("Run inferenceVideo first")
-            return False
-        
+            raise ValueError(self.pathVideoOutputH5 + " does not exist, run inferenceVideo() first")
+            
         # read the data
         print("dlc.loadPositionData() read data from "+self.pathVideoOutputH5)
         self.out = h5py.File(self.pathVideoOutputH5,mode="r")['df_with_missing']['table'][:]
@@ -144,10 +141,9 @@ class Dlc():
         """
         
         if not os.path.isfile(pathVideoFile): 
-            print(pathVideoFile + " does not exist")
-            return False
+            raise ValueError(pathVideoFile + " does not exist")
+            
         self.pathVideoFile = pathVideoFile
-        
         self.loadPositionData(self.pathVideoFile)
         
         cn = [[part+".x", part+".y", part+".prob"]for part in self.bodyParts]

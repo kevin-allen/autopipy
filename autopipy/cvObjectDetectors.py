@@ -63,7 +63,7 @@ class ArenaDetector:
                 cimg = cv2.cvtColor(blurred,cv2.COLOR_GRAY2BGR)
                 circles = cv2.HoughCircles(blurred,cv2.HOUGH_GRADIENT,1,50,
                                           param1=75,param2=45,minRadius=minRadius,maxRadius=maxRadius)#p1=70,p2=50 
-## next try was p1=75, p2=45
+                ## next try was p1=75, p2=45
                 circles = np.uint16(np.around(circles))
 
                 for i in circles[0,:]:
@@ -77,14 +77,14 @@ class ArenaDetector:
             
              
             count=count+1
-
+        
         ## clean up
         cap.release()
         
         # Select circle
         l = np.asarray(l)
         if l.shape[0]==0 :
-            print("problem with circle detection, array size 0")
+            raise ValueError("problem with circle detection, array size 0")
     
         if circleMethod == 'min':
             ## selected the smallest detected circle
