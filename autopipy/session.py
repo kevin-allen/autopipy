@@ -422,6 +422,8 @@ class Session:
                                        leverPose = self.leverPose) for trial in self.trialList]
         
        
+        # remove empty arrays if there are some
+        res = [ i for i in res if isinstance(i, (np.ndarray, np.generic))]
         
         m =np.hstack(res)
         
@@ -485,9 +487,7 @@ class Session:
         
         
         ## get the limit of the lever zone using the data from all trials
-        
-        
-        
+        print("leverZoneMaxDistance calculation")
         self.leverZoneMaxDistance = self.getLeverZoneMaxDistance()
         print("leverZoneMaxDistance:", self.leverZoneMaxDistance)
         

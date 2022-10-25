@@ -566,11 +566,20 @@ class TrialElectro:
         """
         lever = log[ (log.event=="lever_press") | (log.event == "leverPress")]
         index = (lever.time>self.startTime) & (lever.time<self.endTime) # boolean array
+        
+        
         leverPressTime = lever.time[index] # ROS time of lever
+        
+        # leverPressTime should be within self.mousePose.time
+        poseStart = self.mousePose.time.min()
+        poseEnd = self.mousePose.time.max()
+        leverPressTime = leverPressTime[np.logical_and(leverPressTime>poseStart,leverPressTime<poseEnd)]
+        
+        
         
         self.nLeverPresses = len(leverPressTime)
         
-        if self.nLeverPresses != 0 and len(self.mousePose.time) != 0 :
+        if self.nLeverPresses != 0 and len(self.mousePose.time) > 1 :
             # interpolate the x and y position of the animal at the lever press time
             fx = interp1d(self.mousePose.time, self.mousePose.x)
             fy = interp1d(self.mousePose.time, self.mousePose.y)
@@ -580,7 +589,12 @@ class TrialElectro:
             self.leverPress = pd.DataFrame({"time": leverPressTime,
                                             "mouseX":mouseX,
                                            "mouseY":mouseY})
-        
+        else:
+            print("{}, no lever press or no mouse position".format(self.name))
+            print("{}, self.valid set to False".format(self.name))
+            self.valid=False
+            self.leverPress=[]
+            return
         
         if self.nLeverPresses == 0 or len(self.mousePose.time) == 0:
             print("{}, no lever press or no mouse position".format(self.name))
