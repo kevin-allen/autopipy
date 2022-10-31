@@ -8,6 +8,7 @@ The simplest way to install the autopipy package is to first install a deeplabcu
 
 You can find the steps to install [deeplabcut on their github repository](https://github.com/DeepLabCut/DeepLabCut).
 
+I usually remove the [gui] from the DEEPLABCUT.yaml file and added seaborn.
 
 
 ## Install autopipy in your DeepLabCut environment
