@@ -31,7 +31,7 @@ class NavPath:
         mvAngularSpeed
         medianMVDeviationToTarget
         medianHDDeviationToTarget
-        medianMVDeviationRoomReference #This is the movement vector of the animal and the difference between a vector going east[1,0]
+        medianMVDeviationRoomReference #This is the movement vector of the animal and the difference between a vector going East[1,0]
     Methods:
     """
     def __init__(self, pPose, targetPose=None,name=None,resTime=None,trialNo=None):
@@ -200,8 +200,9 @@ class NavPath:
             roomReferenceV = self.pPose[:,0:3].copy()
             roomReferenceV[:,0] = 1
             roomReferenceV[:,1] = 0
+            #print(roomReferenceV)
             
-            angles=self.vectorAngle(mv,roomReferenceV,degrees=True,quadrant=False)
+            angles=self.vectorAngle(mv[:,0:2],roomReferenceV[:,0:2],degrees=True,quadrant=True)
             #angles=self.vectorAngle(mv,degrees=True,quadrant=True)
             self.medianMVDeviationRoomReference = np.nanmedian(angles)
             

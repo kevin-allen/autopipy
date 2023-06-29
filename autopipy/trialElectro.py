@@ -251,7 +251,7 @@ class TrialElectro:
         
         Angles are obtained using np.arctan2
         
-        self.medianMVDeviationRoomReference: Median MV Direction to the room reference (tells you the angle of the animal homing and the vector to east [1,0])
+        self.medianMVDeviationRoomReference: Median MV Direction to the room reference (tells you the angle of the animal homing and the vector to south towards the lever [0,-1])
         self.headingError: Same as in the behavioral analysis, the movement direction of the animal during homing against the vector from the lever to the bridge
         self.startPositionHoming_x: Start position X of the homing path after leaving the lever
         self.startPositionHoming_y: Start position Y of the homing path after leaving the lever
