@@ -61,6 +61,7 @@ class TrialElectro:
         self.homingAngleAtPeriphery = np.nan
         self.homingErrorAtPeriphery = np.nan
         self.homingErrorAtPeripheryLever = np.nan
+        self.medianMVDeviationRoomReference = np.nan
         
         self.test = None
     
