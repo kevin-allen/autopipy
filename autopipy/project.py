@@ -26,7 +26,8 @@ class Project:
         
         print("Project name: "+ self.name)
         print("dataPath: "+ self.dataPath)
-        print("dlcModelPath: "+ self.dlcModelPath)
+        if dlcModelPath is not None:
+            print("dlcModelPath: "+ self.dlcModelPath)
         return
 
     def mouseNameFromSessionName(self,sessionName):
