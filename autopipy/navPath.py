@@ -31,6 +31,7 @@ class NavPath:
         mvAngularSpeed
         medianMVDeviationToTarget
         medianHDDeviationToTarget
+        medianMVDeviationRoomReference #This is the movement vector of the animal and the difference between a vector going East[1,0]
     Methods:
     """
     def __init__(self, pPose, targetPose=None,name=None,resTime=None,trialNo=None):
@@ -81,6 +82,7 @@ class NavPath:
             # the vectors used in the calculation of these should probaby weighted by running speed
             self.medianMVDeviationToTarget=np.NAN
             self.medianHDDeviationToTarget=np.NAN
+            self.medianMVDeviationRoomReference = np.NAN
             
             # variables quantifying turns around the target
             self.entryAngleAroundTarget = np.NAN # angle of first data point relative to target
@@ -171,7 +173,7 @@ class NavPath:
             # reshape to make suitable for vectorAngle function
             v1 = np.reshape(self.mv[i,:],(1,-1))
             v2 = np.reshape(self.mv[i+1,:],(1,-1))
-            mvAngle[i] = self.vectorAngle(v=v1,rv=v2,degrees=True) 
+            mvAngle[i] = self.vectorAngle(v=v1,rv=v2,degrees=True,quadrant=False) 
         self.mvAngularDistance = np.nansum(mvAngle)
         self.mvAngularSpeed=self.mvAngularDistance/self.duration
           
@@ -179,7 +181,7 @@ class NavPath:
         # if we have a target, calculate whether the path lead to the target       
         self.medianMVDeviationToTarget=np.NAN
         self.medianHDDeviationToTarget=np.NAN
-        
+        self.medianMVDeviationRoomReference = np.NAN
         
         if targetPose is not None:
             ## mv heading relative to vector to target
@@ -191,14 +193,27 @@ class NavPath:
             mv = np.diff(posi,axis = 0,prepend=np.NAN) # movement vector
             tv = posiT - posi # toTargetVector, where is the target relative to the animal
             
-            
-            
             angles=self.vectorAngle(mv,tv,degrees=True,quadrant=False)
             self.medianMVDeviationToTarget = np.nanmedian(angles)
+            
+            #Get the heading angle of the animal with respect to the room reference
+            roomReferenceV = self.pPose[:,0:3].copy()
+            roomReferenceV[:,0] = 1
+            roomReferenceV[:,1] = 0
+            #print(roomReferenceV)
+            
+            angles=self.vectorAngle(mv[:,0:2],roomReferenceV[:,0:2],degrees=True,quadrant=True)
+            #angles=self.vectorAngle(mv,degrees=True,quadrant=True)
+            self.medianMVDeviationRoomReference = np.nanmedian(angles)
+            
             
             ## orientation (yaw only!!! should be more generic!!!)        
             # get 2D vectors from yaw angle
             hdv = self.unityVectorsFromAngles(self.pPose[:,3]) # only yaw
+            
+            #print('hdv')
+            #print(repr(hdv))
+            
             angles=self.vectorAngle(hdv,tv[:,0:2],degrees=True,quadrant=False)
             self.medianHDDeviationToTarget = np.nanmedian(angles)
             
@@ -322,6 +337,7 @@ class NavPath:
             "oriAngularDistance" : [self.oriAngularDistance[0]],
             "oriAngularSpeed" : [self.oriAngularSpeed[0]],
             "medianMVDeviationToTarget" : [self.medianMVDeviationToTarget],
+            "medianMVDeviationRoomReference" : [self.medianMVDeviationRoomReference],
             "medianHDDeviationToTarget" : [self.medianHDDeviationToTarget],
             "entryAngleAroundTarget" : [self.entryAngleAroundTarget],
             "exitAngleAroundTarget" : [self.exitAngleAroundTarget],
@@ -349,9 +365,9 @@ class NavPath:
  
             
     def vectorAngle(self,v,rv=np.array([[1,0]]),degrees=False,quadrant=False) :
-        """
-    
+        """        
         Calculate the angles between an array of vectors relative to a reference vector
+        
         Argument:
             v: Array of vectors, one vector per row
             rv: Reference vector
@@ -359,31 +375,29 @@ class NavPath:
             quadrant: Adjust the angle for 3 and 4 quadrants, assume rv is (1,0) and the dimension of v is 2.
         Return:
             Array of angles
+            
         """
         # length of vector
         if v.shape[1]!=rv.shape[1]:
-            print("v and rv should have the same number of column")
-            return
+            raise ValueError("v and rv should have the same number of column")
+            
         vLen = np.sqrt(np.nansum(v*v,axis=1))
         vLen[vLen==0] = np.NAN
-        rvLen = np.sqrt(np.nansum(rv*rv,axis=1))
-
-        # get unitary vectors
+        rvLen = np.sqrt(np.nansum(rv*rv,axis=1))        # get unitary vectors
         uv = v/vLen[:,None]
-        urv = rv/rvLen[:,None]
-
-        # get the angle, dot product, then acos
-        theta = np.arccos(np.clip(np.nansum(uv*urv,axis=1),  -1.0, 1.0))
-
-        if quadrant:
-            # deal with the 3 and 4 quadrant
-            # should only apply this to rows with valid data
-            
-            theta[v[~np.isnan(v[:,-1]),-1] < 0] = 2*np.pi - theta[v[~np.isnan(v[:,-1]),-1]<0] 
-
-        if degrees :
-            theta = theta * 360 / (2*np.pi)
+        urv = rv/rvLen[:,None]        # get the angle, dot product, then acos
+        theta = np.arccos(np.clip(np.sum(uv*urv,axis=1),  -1.0, 1.0)) 
         
+        
+        if quadrant:            
+            # test that rv == (1.0,0)
+            if np.all(rv == np.array([[1, 0]])) == False:
+                raise ValueError("if quadrant is True, the reference vector rv should be (1,0)")            # deal with the 3 and 4 quadrant
+            theta[v[:,-1] < 0] = 2*np.pi - theta[v[:,-1] < 0]   
+            
+        if degrees :
+            theta = theta * 360 / (2*np.pi)        
+            
         return theta
 
     

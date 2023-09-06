@@ -61,6 +61,7 @@ class TrialElectro:
         self.homingAngleAtPeriphery = np.nan
         self.homingErrorAtPeriphery = np.nan
         self.homingErrorAtPeripheryLever = np.nan
+        self.medianMVDeviationRoomReference = np.nan
         
         self.test = None
     
@@ -90,6 +91,7 @@ class TrialElectro:
         self.setPositionZones() # to rerun
         self.checkTrialValidity()
         self.identifyJourneyBorders()
+        
         
         # create a list of JourneyElectro object
         self.journeyList = []
@@ -173,6 +175,10 @@ class TrialElectro:
                        "searchMeanSpeed": [self.searchMeanSpeed],
                        "searchMedianMVDeviationToTarget": [self.searchMedianMVDeviationToTarget],
                        "searchLastTargetToAnimalAngle": [self.searchLastTargetToAnimalAngle],
+                       "medianMVDeviationRoomReference": [self.medianMVDeviationRoomReference],
+                       "headingError": [self.headingError],
+                       "startPositionHoming_x":[self.startPositionHoming_x],
+                       "startPositionHoming_y":[self.startPositionHoming_y],
                        "homingAngleAtPeriphery" : [self.homingAngleAtPeriphery],
                        "homingErrorAtPeriphery" : [self.homingErrorAtPeriphery],
                        "homingErrorAtPeripheryLever" : [self.homingErrorAtPeripheryLever],
@@ -246,17 +252,29 @@ class TrialElectro:
         
         Angles are obtained using np.arctan2
         
+        self.medianMVDeviationRoomReference: Median MV Direction to the room reference (tells you the angle of the animal homing and the vector to south towards the lever [0,-1])
+        self.headingError: Same as in the behavioral analysis, the movement direction of the animal during homing against the vector from the lever to the bridge
+        self.startPositionHoming_x: Start position X of the homing path after leaving the lever
+        self.startPositionHoming_y: Start position Y of the homing path after leaving the lever
         """
         if self.valid == False:
             self.homingAngleAtPeriphery = np.nan
             self.homingErrorAtPeriphery = np.nan
             self.homingErrorAtPeripheryLever = np.nan
+            self.medianMVDeviationRoomReference = np.nan
+            self.headingError = np.nan
+            self.startPositionHoming_x = np.nan
+            self.startPositionHoming_y = np.nan
             return 
         
         if len(self.journeyList) == 0:
             self.homingAngleAtPeriphery = np.nan
             self.homingErrorAtPeriphery = np.nan
             self.homingErrorAtPeripheryLever = np.nan
+            self.medianMVDeviationRoomReference = np.nan
+            self.headingError = np.nan
+            self.startPositionHoming_x = np.nan
+            self.startPositionHoming_y = np.nan
             return 
             
         # the last journey should be the one with lever press
@@ -267,8 +285,16 @@ class TrialElectro:
             self.homingAngleAtPeriphery = np.nan
             self.homingErrorAtPeriphery = np.nan
             self.homingErrorAtPeripheryLever = np.nan
+            self.medianMVDeviationRoomReference = np.nan
+            self.headingError = np.nan
+            self.startPositionHoming_x = np.nan
+            self.startPositionHoming_y = np.nan
             return
-    
+        
+        self.medianMVDeviationRoomReference  = j.navPaths["homingFromLeavingLeverToPeriphery"].medianMVDeviationRoomReference
+        self.headingError = j.navPaths["homingFromLeavingLeverToPeriphery"].medianMVDeviationToTarget
+        self.startPositionHoming_x = np.nanmedian(j.navPaths["homingFromLeavingLeverToPeriphery"].pPose[:6,0]) #Take a very short slice of the starting position
+        self.startPositionHoming_y = np.nanmedian(j.navPaths["homingFromLeavingLeverToPeriphery"].pPose[:6,1])
 
         x = j.navPaths["homingPath"].pPose[:,0] - self.zones["arena"][0] # bring the arena center to 0,0 if not the case
         y = j.navPaths["homingPath"].pPose[:,1] - self.zones["arena"][1]

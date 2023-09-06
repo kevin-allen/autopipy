@@ -55,6 +55,12 @@ class JourneyElectro:
         
         self.lever = lever
         self.zones = zones
+        
+        #Add Bridge Coordinates and bridge Pose
+        self.BridgeMidX = self.zones["bridge"][0]+self.zones["bridge"][2]/2
+        self.BridgeBottomY=self.zones["bridge"][1]
+        self.bridgePose = self.poseFromBridgeCoordinates()
+        
         self.arenaRadiusProportionToPeri = arenaRadiusProportionToPeri
         self.arenaRadius = self.zones["arena"][2]
         self.leverZoneMaxDistance = leverZoneMaxDistance
@@ -179,7 +185,7 @@ class JourneyElectro:
 
            
             # after lever press
-            self.navPaths["homingPath"] = self.createNavPath(lpt,self.endTime,target=self.lever.pose,name=self.name+"_"+"homingPath")
+            self.navPaths["homingPath"] = self.createNavPath(lpt,self.endTime,target=self.bridgePose,name=self.name+"_"+"homingPath")
             
             # leaving lever after lever press
             afterPress = self.mousePose.loc[self.mousePose.time > lpt]
@@ -192,10 +198,10 @@ class JourneyElectro:
             #print("leaving to peri:", leavingLeverTime, reachingPeripheryTime, reachingPeripheryTime-leavingLeverTime)
             
             # from leaving the lever after the press to end
-            self.navPaths["homingFromLeavingLever"] = self.createNavPath(leavingLeverTime,self.endTime,target=self.lever.pose,name=self.name+"_"+"homingFromLeavingLever")
+            self.navPaths["homingFromLeavingLever"] = self.createNavPath(leavingLeverTime,self.endTime,target=self.bridgePose,name=self.name+"_"+"homingFromLeavingLever")
             
             
-            self.navPaths["homingFromLeavingLeverToPeriphery"] = self.createNavPath(leavingLeverTime,reachingPeripheryTime,target=self.lever.pose,name=self.name+"_"+"homingFromLeavingLeverToPeriphery")
+            self.navPaths["homingFromLeavingLeverToPeriphery"] = self.createNavPath(leavingLeverTime,reachingPeripheryTime,target=self.bridgePose,name=self.name+"_"+"homingFromLeavingLeverToPeriphery")
             
             
             # at lever around the lever press time
@@ -252,3 +258,11 @@ class JourneyElectro:
         """
         if self.nLeverPresses != 0:
             ax.scatter(self.leverPresses.mouseX,self.leverPresses.mouseY,c="red",zorder=2,s=5)
+            
+            
+    def poseFromBridgeCoordinates(self) :
+        """
+        Create a numpy array containing the pose (x, y, z, yaw, pitch, roll, time)  
+        from the middle of the bridge
+        """
+        return np.array([[self.BridgeMidX,self.BridgeBottomY,0,0,0,0,0]])
