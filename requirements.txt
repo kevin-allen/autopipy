@@ -1,4 +1,4 @@
-jupyterlab==3.0.5
+jupyterlab==3.6.7
 ipython==7.19.0
 numpy==1.19.5
 opencv-python==4.5.1.48
